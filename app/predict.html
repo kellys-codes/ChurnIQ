@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurnIQ — Predict Customer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="predict.css">
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="loading-spinner-big"></div>
+  <div class="loading-text" id="loading-text">Processing CSV data...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo-wrap">
+    <div class="sidebar-logo">CI</div>
+    <span class="sidebar-app-name">ChurnIQ</span>
+  </div>
+  <div class="sidebar-section-label">Main</div>
+  <a class="nav-item" href="dashboard.html" id="nav-dashboard">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="nav-label">Dashboard</span>
+  </a>
+  <a class="nav-item" href="atrisk.html" id="nav-at-risk">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span class="nav-label">At-Risk Customers</span>
+  </a>
+  <a class="nav-item" href="segments.html" id="nav-segments">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    <span class="nav-label">Customer Segments</span>
+  </a>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section-label">Tools</div>
+  <a class="nav-item active" href="predict.html" id="nav-predict">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    <span class="nav-label">Predict Customer</span>
+  </a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <h1>Predict Customer</h1>
+    <div class="topbar-right">
+      <div class="data-status" id="data-status">
+        <div class="data-status-dot none" id="status-dot"></div>
+        <span id="status-text">No data loaded</span>
+      </div>
+      <button class="btn-import" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="predict-card">
+      <div class="predict-header">
+        <h2>Enter Customer Data</h2>
+        <p>Fill in the customer's details to calculate their churn risk using AI analysis</p>
+      </div>
+      <div class="predict-body">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">Customer ID</label>
+            <input type="text" id="f-id" placeholder="e.g. CUST-10482">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Call Failures</label>
+            <input type="number" id="f-failures" placeholder="e.g. 5" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Complains (0 or 1)</label>
+            <input type="number" id="f-complains" placeholder="0 or 1" min="0" max="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subscription Length (months)</label>
+            <input type="number" id="f-sublength" placeholder="e.g. 24" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Charge Amount (0–9)</label>
+            <input type="number" id="f-charge" placeholder="0–9" min="0" max="9">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Seconds of Use</label>
+            <input type="number" id="f-seconds" placeholder="e.g. 12400" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Frequency of Use</label>
+            <input type="number" id="f-freq" placeholder="e.g. 72" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Frequency of SMS</label>
+            <input type="number" id="f-sms" placeholder="e.g. 15" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Distinct Called Numbers</label>
+            <input type="number" id="f-distinct" placeholder="e.g. 34" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Customer Value ($)</label>
+            <input type="number" id="f-value" placeholder="e.g. 1200" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age Category</label>
+            <select id="f-age">
+              <option value="">Select category</option>
+              <option value="1">1 — Youngest</option>
+              <option value="2">2 — Young</option>
+              <option value="3">3 — Middle</option>
+              <option value="4">4 — Senior</option>
+              <option value="5">5 — Oldest</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tariff Plan</label>
+            <select id="f-tariff">
+              <option value="">Select plan</option>
+              <option value="payg">Pay-as-you-go</option>
+              <option value="contract">Contractual</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="f-status">
+              <option value="">Select status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn-predict" id="predict-btn" onclick="runPrediction()">
+          <span id="btn-text">Calculate Churn Risk</span>
+          <svg id="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div class="spinner" id="btn-spinner"></div>
+        </button>
+
+        <div class="result-panel" id="result-panel">
+          <div class="result-header" id="result-header">
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:2px">Churn Risk Assessment</div>
+              <div style="font-size:16px;font-weight:600" id="result-cust-id">Customer —</div>
+            </div>
+            <div class="result-risk-badge" id="result-badge">—</div>
+          </div>
+          <div class="result-body">
+            <div class="result-grid">
+              <div class="result-metric">
+                <div class="result-metric-val" id="res-prob">—</div>
+                <div class="result-metric-lbl">Churn Probability</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-val" id="res-month">—</div>
+                <div class="result-metric-lbl">Predicted Churn Month</div>
+              </div>
+              <div class="result-metric">
+                <div class="result-metric-val" id="res-segment">—</div>
+                <div class="result-metric-lbl">Customer Segment</div>
+              </div>
+            </div>
+            <div class="result-narrative" id="res-narrative"></div>
+            <div class="result-actions">
+              <h4>Recommended Retention Actions</h4>
+              <div class="action-list" id="res-actions"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Import Customer Data</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <div class="drop-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="drop-text">Click or drag & drop your CSV here</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:8px">Supports Customer_Churn.csv format</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script src="predict.js"></script>
+</body>
+</html>

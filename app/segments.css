@@ -1,0 +1,22 @@
+.segments-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.segment-card { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: box-shadow 0.15s; }
+.segment-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.segment-card.red    { border-top: 3px solid var(--accent-red); }
+.segment-card.orange { border-top: 3px solid var(--accent-orange); }
+.segment-card.blue   { border-top: 3px solid var(--accent-blue); }
+.segment-card.green  { border-top: 3px solid var(--accent-green); }
+.segment-card.gray   { border-top: 3px solid #9ca3af; }
+.seg-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.seg-dot { width: 14px; height: 14px; border-radius: 50%; }
+.seg-name { font-size: 15px; font-weight: 600; }
+.seg-count { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.seg-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.seg-metric-label { font-size: 11px; color: var(--text-muted); }
+.seg-metric-val { font-size: 17px; font-weight: 700; }
+.seg-metric-val.red    { color: var(--accent-red); }
+.seg-metric-val.orange { color: var(--accent-orange); }
+.seg-metric-val.blue   { color: var(--accent-blue); }
+.seg-metric-val.green  { color: var(--accent-green); }
+.seg-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+.seg-tag { display: inline-block; background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.seg-tag.urgent { background: #fef2f2; color: #b91c1c; }
