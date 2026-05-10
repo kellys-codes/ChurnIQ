@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// shared.js  —  ChurnIQ  |  Common utilities for all pages
+// common.js  —  ChurnIQ  |  Common utilities for all pages
 // ═══════════════════════════════════════════════════════════════
 
 const STORAGE_KEY  = 'churniq_data';
