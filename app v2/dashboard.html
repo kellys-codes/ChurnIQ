@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurnIQ — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="dashboard.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="loading-spinner-big"></div>
+  <div class="loading-text" id="loading-text">Processing…</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo-wrap">
+    <div class="sidebar-logo">CI</div>
+    <span class="sidebar-app-name">ChurnIQ</span>
+  </div>
+  <div class="sidebar-section-label">Main</div>
+  <a class="nav-item active" href="dashboard.html">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="nav-label">Dashboard</span>
+  </a>
+  <a class="nav-item" href="at-risk.html">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span class="nav-label">At-Risk Customers</span>
+  </a>
+  <a class="nav-item" href="segments.html">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    <span class="nav-label">Customer Segments</span>
+  </a>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section-label">Tools</div>
+  <a class="nav-item" href="predict.html">
+    <div class="nav-active-bar"></div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    <span class="nav-label">Predict Customer</span>
+  </a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <div class="topbar-right">
+      <div class="data-status" id="data-status">
+        <div class="data-status-dot none" id="status-dot"></div>
+        <span id="status-text">No data loaded</span>
+      </div>
+      <button class="btn-import" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- EMPTY STATE -->
+    <div id="dashboard-empty" class="empty-state" style="display:none">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <h3>No data loaded yet</h3>
+      <p>Import your Customer_Churn.csv file to see live analytics and insights computed from your actual data.</p>
+      <button class="btn-primary" onclick="openModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import CSV
+      </button>
+    </div>
+
+    <!-- DASHBOARD CONTENT -->
+    <div id="dashboard-content" style="display:none">
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card orange">
+          <div class="kpi-label"><span>Revenue at Risk</span><span class="info-icon" title="Total customer value of churned customers">i</span></div>
+          <div class="kpi-value" id="kpi-revenue">—</div>
+          <div class="kpi-sub">From churned customers</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label"><span>Avg Customer Value</span><span class="info-icon" title="Average lifetime customer value across all customers">i</span></div>
+          <div class="kpi-value" id="kpi-avg-value">—</div>
+          <div class="kpi-sub" id="kpi-total-label">Across all customers</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label"><span>Churned Customers</span><span class="info-icon" title="Customers who have churned">i</span></div>
+          <div class="kpi-value" id="kpi-churned">—</div>
+          <div class="kpi-sub" id="kpi-churned-sub">Total in dataset</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label"><span>Churn Rate</span><span class="info-icon" title="Percentage of customers who churned">i</span></div>
+          <div class="kpi-value" id="kpi-churn-rate">—</div>
+          <div class="kpi-sub" id="kpi-rate-sub">Of total customers</div>
+        </div>
+      </div>
+
+      <!-- Row 1: Risk Drivers + Donut -->
+      <div class="widget-row">
+        <div class="widget-card">
+          <div class="widget-title">Top Churn Risk Drivers</div>
+          <div class="widget-subtitle">Correlation with churn from dataset</div>
+          <div id="risk-drivers-content">
+            <div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">Load CSV to see risk drivers</div>
+          </div>
+        </div>
+        <div class="widget-card">
+          <div class="widget-title">Churn by Tariff Plan</div>
+          <div class="widget-subtitle">Pay-as-you-go vs Contractual</div>
+          <div class="donut-row">
+            <div class="donut-wrap">
+              <canvas id="donutChart" width="120" height="120"></canvas>
+              <div class="donut-center">
+                <div class="donut-center-num" id="donut-total">—</div>
+                <div class="donut-center-label">churned</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;flex:1">
+              <div class="legend-item">
+                <div class="legend-dot-row"><div class="legend-dot" style="background:#ef4444"></div>Pay-as-you-go</div>
+                <div class="legend-pct" style="color:#ef4444" id="legend-payg-pct">—</div>
+                <div class="legend-count" id="legend-payg-count">— customers</div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot-row"><div class="legend-dot" style="background:#3b82f6"></div>Contractual</div>
+                <div class="legend-pct" style="color:#3b82f6" id="legend-contract-pct">—</div>
+                <div class="legend-count" id="legend-contract-count">— customers</div>
+              </div>
+            </div>
+          </div>
+          <div class="key-finding" id="tariff-finding" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div id="tariff-finding-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscription Length -->
+      <div class="widget-card" style="margin-bottom:20px">
+        <div class="widget-title">Churn by Subscription Length</div>
+        <div class="widget-subtitle">Number of churned customers per subscription length bucket</div>
+        <div style="position:relative;width:100%;height:200px;margin-top:12px">
+          <canvas id="subLengthChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Age Group -->
+      <div class="widget-card" style="margin-bottom:20px">
+        <div class="widget-title">Churn Rate by Age Group</div>
+        <div class="widget-subtitle">Churn percentage across age categories (1=youngest, 5=oldest)</div>
+        <div style="position:relative;width:100%;height:180px;margin-top:12px">
+          <canvas id="ageGroupChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Charge Amount -->
+      <div class="widget-card" style="margin-bottom:20px">
+        <div class="widget-title">Churn Rate by Charge Amount</div>
+        <div class="widget-subtitle">Customers on lower charge tiers show a higher tendency to churn</div>
+        <div style="position:relative;width:100%;height:180px;margin-top:12px">
+          <canvas id="chargeAmountChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Distinct Numbers -->
+      <div class="widget-card" style="margin-bottom:20px">
+        <div class="widget-title">Churn Rate by Distinct Called Numbers</div>
+        <div class="widget-subtitle">Customers with very few unique contacts tend to have a higher likelihood of churning</div>
+        <div style="position:relative;width:100%;height:180px;margin-top:12px">
+          <canvas id="distinctNumbersChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Survival Curve -->
+      <div class="widget-card">
+        <div class="widget-title">Monthly Survival Probability</div>
+        <div class="widget-subtitle">Probability a customer remains active over time based on historical subscription data</div>
+        <div id="survival-stats" style="display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap"></div>
+        <div style="position:relative;width:100%;height:220px;">
+          <canvas id="survivalChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Import Customer Data</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave()"
+           ondrop="handleDrop(event)">
+        <div class="drop-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="drop-text">Click or drag & drop your CSV here</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:8px">Supports Customer_Churn.csv format</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
