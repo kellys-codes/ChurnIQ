@@ -88,3 +88,20 @@ input::placeholder { color: var(--text-light); }
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--accent-blue); flex-shrink: 0; margin-top: 4px;
 }
+/* Color coding for the risk badge and panel */
+.risk-low { 
+    color: #10b981 !important; 
+} /* Green */
+
+.risk-medium { 
+    color: #f59e0b !important; 
+} /* Orange/Yellow */
+
+.risk-high { 
+    color: #ef4444 !important; 
+} /* Red */
+
+/* Optional: Subtle background tint for the result header */
+.bg-low { background-color: #f0fdf4; }
+.bg-medium { background-color: #fffbeb; }
+.bg-high { background-color: #fef2f2; }

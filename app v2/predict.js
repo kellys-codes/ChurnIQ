@@ -1,175 +1,188 @@
 // ═══════════════════════════════════════════════════════════════
-// predict.js  —  ChurnIQ  |  Predict Customer page
+// predict.js — ChurnIQ | Final Recalibrated XGBoost AFT Engine
 // ═══════════════════════════════════════════════════════════════
 
-// Called by shared.js after a new CSV is imported — nothing to re-render here
-function onDataLoaded() {}
+let xgbModel = null;
 
-// ── RUN PREDICTION ───────────────────────────────────────────────
-function runPrediction() {
-  const id         = document.getElementById('f-id').value        || 'CUST-XXXX';
-  const failures   = parseFloat(document.getElementById('f-failures').value)  || 0;
-  const complains  = parseInt(document.getElementById('f-complains').value)    || 0;
-  const sublength  = parseFloat(document.getElementById('f-sublength').value)  || 0;
-  const charge     = parseFloat(document.getElementById('f-charge').value)     || 0;
-  const secondsOfUse = parseFloat(document.getElementById('f-seconds').value)  || 0;
-  const minutesOfUse = secondsOfUse / 60;
-  const freq       = parseFloat(document.getElementById('f-freq').value)       || 0;
-  const sms        = parseFloat(document.getElementById('f-sms').value)        || 0;
-  const distinct   = parseFloat(document.getElementById('f-distinct').value)   || 0;
-  const ageGroup   = parseInt(document.getElementById('f-age').value)          || 3;
-  const tariff     = document.getElementById('f-tariff').value;
-  const custValue  = parseFloat(document.getElementById('f-value').value)      || 0;
-  const status     = document.getElementById('f-status').value;
+async function loadXGBModel() {
+  if (xgbModel) return xgbModel;
+  try {
+    const resp = await fetch('model.json'); 
+    if (!resp.ok) throw new Error("Model file not found");
+    xgbModel = await resp.json();
+    return xgbModel;
+  } catch (err) {
+    console.error('XGBoost Load Error:', err);
+    return null;
+  }
+}
+
+// ── RECALIBRATED PREDICTION ENGINE ───────────────────────────────
+async function computeChurnPrediction(d) {
+  const model = await loadXGBModel();
+  if (!model) throw new Error("XGBoost brain offline.");
+
+  // 1. Feature Vector
+  const features = [
+    d.failures, d.complains, d.charge, d.freq, d.sms, 
+    d.distinct, d.ageGroup, (d.tariff === 'contract' || d.tariff === '2') ? 2 : 1, d.minutesOfUse
+  ];
+
+  // 2. Tree Traversal
+  const trees = model.learner.gradient_booster.model.trees;
+  const baseScore = parseBaseScore(model);
+  let logTime = baseScore;
+  for (const tree of trees) {
+    let nodeIdx = 0;
+    while (tree.left_children[nodeIdx] !== -1) {
+      nodeIdx = (features[tree.split_indices[nodeIdx]] < tree.split_conditions[nodeIdx]) 
+                ? tree.left_children[nodeIdx] : tree.right_children[nodeIdx];
+    }
+    logTime += tree.base_weights[nodeIdx];
+  }
+
+  // 3. Math & Universal Calibration
+  const sigma = parseFloat(model.learner?.learner_model_param?.aft_loss_distribution_scale || '1.0');
+  
+  // We check risk at Month 36 to ensure scores are always unique and visible
+  const z = (Math.log(36) - logTime) / sigma;
+  let risk = 0.5 * (1 + dashErf(z / Math.sqrt(2)));
+
+  // 4. THE FIX: Risk Multipliers (Making it "Real")
+  // These MUST stay inside the function to work
+  if (d.failures > 0) {
+    risk = risk + (d.failures * 0.03); // Adds 3% risk for every failure
+  }
+  if (d.complains > 0) {
+    risk = risk + 0.35; // Adds 35% flat risk for complaints
+  }
+  if (d.minutesOfUse < 30 && d.freq < 5) {
+    risk = Math.max(risk, 0.85); // Floor risk for inactive "Zombies"
+  }
+
+  // 5. Final Formatting
+  const finalProb = Math.min(Math.max(risk, 0.01), 0.99);
+  const medianMonth = Math.exp(logTime);
+
+  return {
+    score: Math.round(finalProb * 100),
+    riskLevel: finalProb >= 0.6 ? 'HIGH' : finalProb >= 0.25 ? 'MEDIUM' : 'LOW',
+    churnProbability: Math.round(finalProb * 100) + '%',
+    predictedChurnMonth: finalProb > 0.8 ? '1–3' : (medianMonth > 48 ? '48+' : Math.round(medianMonth)),
+    segment: getSegment(d, finalProb),
+    narrative: getNarrative(d, finalProb, Math.round(medianMonth)),
+    actions: getActions(d, finalProb)
+  };
+}
+
+// ── UI CONTROLLER ────────────────────────────────────────────────
+async function runPrediction() {
+  const id = document.getElementById('f-id').value || 'CUST-NEW';
+  const data = {
+    failures: parseFloat(document.getElementById('f-failures').value) || 0,
+    complains: parseInt(document.getElementById('f-complains').value) || 0,
+    charge: parseFloat(document.getElementById('f-charge').value) || 0,
+    minutesOfUse: (parseFloat(document.getElementById('f-seconds').value) || 0) / 60,
+    freq: parseFloat(document.getElementById('f-freq').value) || 0,
+    sms: parseFloat(document.getElementById('f-sms').value) || 0,
+    distinct: parseFloat(document.getElementById('f-distinct').value) || 0,
+    ageGroup: parseInt(document.getElementById('f-age').value) || 3,
+    tariff: document.getElementById('f-tariff').value,
+    custValue: parseFloat(document.getElementById('f-value').value) || 0
+  };
 
   const btn = document.getElementById('predict-btn');
   btn.disabled = true;
-  document.getElementById('btn-text').textContent     = 'Analyzing…';
-  document.getElementById('btn-arrow').style.display  = 'none';
-  document.getElementById('btn-spinner').style.display = 'block';
+  document.getElementById('btn-text').textContent = 'Analyzing Patterns…';
 
-  setTimeout(() => {
-    try {
-      const result = computeChurnPrediction({
-        id, failures, complains, sublength, charge, minutesOfUse,
-        freq, sms, distinct, ageGroup, tariff, custValue, status
-      });
-      showResult(id, result);
-    } catch (err) {
-      showToast('Analysis failed: ' + err.message, 'error');
-    }
+  try {
+    const result = await computeChurnPrediction(data);
+    showResult(id, result);
+  } catch (err) {
+    console.error(err);
+    alert("Prediction Error: Check console (F12)");
+  } finally {
     btn.disabled = false;
-    document.getElementById('btn-text').textContent     = 'Calculate Churn Risk';
-    document.getElementById('btn-arrow').style.display  = '';
-    document.getElementById('btn-spinner').style.display = 'none';
-  }, 600);
-}
-
-// ── PREDICTION ENGINE ────────────────────────────────────────────
-function computeChurnPrediction(d) {
-  // 1. Risk score (0–100)
-  let score = 0;
-  score += Math.min(d.failures * 4.2, 36);
-  score += d.complains ? 22 : 0;
-  if      (d.charge <= 1) score += 15;
-  else if (d.charge <= 3) score +=  7;
-  else if (d.charge >= 4) score -=  5;
-
-  if      (d.sms < 5)  score += 12;
-  else if (d.sms < 20) score +=  6;
-  else if (d.sms > 60) score -=  4;
-
-  if      (d.freq < 5)  score += 10;
-  else if (d.freq < 20) score +=  4;
-  else if (d.freq > 80) score -=  3;
-
-  if      (d.distinct < 5)  score += 10;
-  else if (d.distinct < 10) score +=  4;
-  else if (d.distinct >= 20 && d.distinct <= 40) score -= 4;
-
-  score += (d.tariff === 'payg' || d.tariff === '1') ? 10 : 0;
-
-  if      (d.minutesOfUse < 30)  score +=  7;
-  else if (d.minutesOfUse < 100) score +=  2;
-  else if (d.minutesOfUse > 400) score -=  3;
-
-  score += d.ageGroup === 1 ? 2 : 0;
-  score = Math.min(Math.max(Math.round(score), 0), 100);
-
-  const riskLevel = score >= 60 ? 'HIGH' : score >= 30 ? 'MEDIUM' : 'LOW';
-
-  // 2. Churn probability
-  const churnProb = Math.round(1 / (1 + Math.exp(-0.08 * (score - 45))) * 100);
-
-  // 3. Predicted churn month
-  const predictedMonth = Math.round(44 - (score / 100) * 36);
-  const monthLow  = Math.max(1,  predictedMonth - 2);
-  const monthHigh = Math.min(47, predictedMonth + 2);
-
-  // 4. Segment
-  let segment;
-  if (d.failures > 5 || d.complains)                                    segment = 'High-Risk Churner';
-  else if (d.sms < 10 && d.freq < 10)                                   segment = 'Low Engagement';
-  else if ((d.tariff === 'payg' || d.tariff === '1') && score >= 30)    segment = 'Pay-as-go Switcher';
-  else if (d.sublength <= 6 || d.distinct < 5)                          segment = 'New Subscriber';
-  else if (score < 25)                                                   segment = 'Loyal Base';
-  else                                                                   segment = 'Silent Churner';
-
-  // 5. Narrative
-  const drivers = [];
-  if (d.failures > 5)    drivers.push(`high call failures (${d.failures})`);
-  if (d.complains)       drivers.push('an active complaint');
-  if (d.charge <= 1)     drivers.push('a very low charge amount');
-  if (d.sms < 20)        drivers.push(`low SMS usage (${d.sms})`);
-  if (d.freq < 20)       drivers.push(`low call frequency (${d.freq})`);
-  if (d.distinct < 5)    drivers.push(`very few unique contacts (${d.distinct})`);
-  if (d.tariff === 'payg' || d.tariff === '1') drivers.push('a pay-as-you-go plan');
-
-  let narrative;
-  if (!drivers.length) {
-    narrative = riskLevel === 'LOW'
-      ? 'This customer shows a healthy usage pattern with no major churn signals detected. Ongoing monitoring is recommended.'
-      : 'This customer shows some risk indicators. Consider a routine check-in to ensure satisfaction.';
-  } else {
-    const top   = drivers.slice(0, 3).join(', ');
-    const close = riskLevel === 'HIGH'   ? 'Immediate action is recommended.'
-                : riskLevel === 'MEDIUM' ? 'Proactive outreach is advised.'
-                :                          'Continued monitoring is recommended.';
-    narrative = `This customer has a ${riskLevel.toLowerCase()} churn risk. Key risk factors: ${top}. ${close}`;
+    document.getElementById('btn-text').textContent = 'Calculate Churn Risk';
   }
-
-  // 6. Retention actions
-  const actions = [];
-  if (d.failures > 5)    actions.push('Investigate call quality issues and offer a service credit');
-  if (d.complains)       actions.push('Assign a support agent to resolve the open complaint promptly');
-  if (d.charge <= 1)     actions.push('Offer a plan upgrade with better value to increase engagement');
-  if (d.tariff === 'payg' || d.tariff === '1') actions.push('Offer a contract plan with a promotional discount');
-  if (d.sms < 20)        actions.push('Provide an SMS bundle to encourage more frequent usage');
-  if (d.freq < 20)       actions.push('Send a re-engagement offer with bonus call minutes or data');
-  if (d.distinct < 5)    actions.push('Schedule a proactive check-in to understand usage needs');
-  if (d.custValue > 500) actions.push('Flag as high-value — consider a loyalty reward or VIP tier');
-  if (riskLevel === 'HIGH' && actions.length < 2) actions.push('Schedule a retention call within 48 hours');
-  if (!actions.length)   actions.push('No immediate action needed — schedule a routine check-in in 30 days');
-
-  return {
-    score,
-    riskLevel,
-    churnProbability: churnProb + '%',
-    predictedChurnMonth: `${monthLow}–${monthHigh}`,
-    segment,
-    narrative,
-    actions: actions.slice(0, 4)
-  };
 }
 
-// ── SHOW RESULT ──────────────────────────────────────────────────
+function parseBaseScore(model) {
+  const raw = model.learner?.learner_model_param?.base_score || '0';
+  return parseFloat(String(raw).replace(/[\[\]]/g, '')) || 0;
+}
+
+// ── HELPERS (AFT & UI) ───────────────────────────────────────────
+function dashErf(x) {
+  const p = 0.3275911, a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
+  const sign = x < 0 ? -1 : 1; x = Math.abs(x);
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a[4]*t+a[3])*t+a[2])*t+a[1])*t+a[0])*t*Math.exp(-x*x));
+  return sign * y;
+}
+
+// HELPER: Traverses the XGBoost trees
+function dashPredictTree(tree, features) {
+  let nodeIdx = 0;
+  while (tree.left_children[nodeIdx] !== -1) {
+    const fIdx = tree.split_indices[nodeIdx];
+    const val = tree.split_conditions[nodeIdx];
+    nodeIdx = (features[fIdx] < val) ? tree.left_children[nodeIdx] : tree.right_children[nodeIdx];
+  }
+  return tree.base_weights[nodeIdx];
+}
+
+function getSegment(d, prob) {
+  if (prob > 0.9) return 'Inactive / Zombie';
+  if (d.complains) return 'High-Risk Churner';
+  if (prob < 0.2) return 'Loyal Base';
+  return 'Standard User';
+}
+
+function getNarrative(d, risk, month) {
+  if (risk === 'HIGH') return `Critical churn risk detected. The AFT model expects potential churn within ${month} months due to recent usage friction or inactivity.`;
+  return `This customer shows a stable profile. Predicted tenure extends beyond the primary risk window.`;
+}
+
+function getActions(d, risk) {
+  const acts = [];
+  if (risk === 'HIGH') acts.push("Immediate re-engagement call required.");
+  if (d.complains) acts.push("Escalate open complaint to senior support.");
+  if (d.failures > 10) acts.push("Verify technical infrastructure in customer's region.");
+  if (acts.length === 0) acts.push("Maintain standard monthly monitoring.");
+  return acts.slice(0, 3);
+}
+
 function showResult(id, r) {
   const panel = document.getElementById('result-panel');
+  const badge = document.getElementById('result-badge');
+  const header = document.getElementById('result-header');
+  
   panel.style.display = 'block';
   document.getElementById('result-cust-id').textContent = id;
-
-  const badge  = document.getElementById('result-badge');
-  const colors = {
-    HIGH:   { bg: '#fef2f2', color: '#b91c1c' },
-    MEDIUM: { bg: '#fffbeb', color: '#92400e' },
-    LOW:    { bg: '#f0fdf4', color: '#166534' }
-  };
-  const c = colors[r.riskLevel] || colors.MEDIUM;
-  badge.textContent      = r.riskLevel;
-  badge.style.background = c.bg;
-  badge.style.color      = c.color;
-
-  const headerBg = { HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4' };
-  document.getElementById('result-header').style.background = headerBg[r.riskLevel] || 'white';
-
-  document.getElementById('res-prob').textContent    = r.churnProbability;
-  document.getElementById('res-month').textContent   = 'Month ' + r.predictedChurnMonth;
+  
+  // 1. Set the text
+  badge.textContent = r.riskLevel;
+  
+  // 2. Remove any previous color classes to prevent "color bleeding"
+  badge.classList.remove('risk-low', 'risk-medium', 'risk-high');
+  header.classList.remove('bg-low', 'bg-medium', 'bg-high');
+  
+  // 3. Apply new color based on the riskLevel string
+  const level = r.riskLevel.toLowerCase(); // 'low', 'medium', or 'high'
+  badge.classList.add(`risk-${level}`);
+  header.classList.add(`bg-${level}`);
+  
+  // Update metrics
+  document.getElementById('res-prob').textContent = r.churnProbability;
+  document.getElementById('res-month').textContent = 'Month ' + r.predictedChurnMonth;
   document.getElementById('res-segment').textContent = r.segment;
   document.getElementById('res-narrative').textContent = r.narrative;
-
-  document.getElementById('res-actions').innerHTML = (r.actions || []).map(a =>
-    `<div class="action-item"><div class="action-bullet"></div><span>${a}</span></div>`
+  
+  // Update actions
+  document.getElementById('res-actions').innerHTML = r.actions.map(a => 
+    `<div class="action-item"><span>${a}</span></div>`
   ).join('');
-
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  panel.scrollIntoView({ behavior: 'smooth' });
 }
