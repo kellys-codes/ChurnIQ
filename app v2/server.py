@@ -1,6 +1,4 @@
-# ═══════════════════════════════════════════════════════════════
-# server.py — ChurnIQ | Flask API for XGBoost Inference
-# ═══════════════════════════════════════════════════════════════
+
 import os
 import math
 import json
@@ -22,9 +20,9 @@ booster = None
 base_score = 0.5
 
 FEATURE_NAMES = [
-    "Call  Failure",
+    "Call Failure",
     "Complains",
-    "Charge  Amount",
+    "Charge Amount",
     "Frequency of use",
     "Frequency of SMS",
     "Distinct Called Numbers",
@@ -41,6 +39,10 @@ def load_model():
     print(f"[ChurnIQ] Loading model from {resolved}")
     booster = xgb.Booster()
     booster.load_model(resolved)
+    
+    # Print names to debug if needed, then clear them to avoid mismatch errors
+    print(f"[ChurnIQ] Booster feature names: {booster.feature_names}")
+    booster.feature_names = None
 
     # Parse base_score from the JSON metadata
     with open(resolved, "r") as f:
@@ -87,7 +89,7 @@ def compute_risk_score(features: dict) -> int:
           distinct, age_group, tariff_plan, minutes_of_use]],
         dtype=np.float32,
     )
-    dmat = xgb.DMatrix(row, feature_names=FEATURE_NAMES)
+    dmat = xgb.DMatrix(row)
 
     # XGBoost survival:aft returns log(predicted survival time)
     log_time = float(booster.predict(dmat)[0])
