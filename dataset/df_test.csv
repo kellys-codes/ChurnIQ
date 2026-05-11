@@ -1,4 +1,4 @@
-Call Failure,Complains,Subscription Length,Charge Amount,Frequency of use,Frequency of SMS,Distinct Called Numbers,Age Group,Tariff Plan,Status,Age,Customer Value,Churn,Minutes of Use
+Call Failure,Complains,Subscription Length,Charge Amount,Seconds of Use,Frequency of use,Frequency of SMS,Distinct Called Numbers,Age Group,Tariff Plan,Status,Age,Customer Value,Churn
 15,0,21,4,59,49,26,3,1,1,30,331.88,0,55.63333333333333
 6,0,26,0,25,35,9,3,1,2,30,161.4,0,8.5
 12,1,38,1,47,39,33,3,1,1,30,251.0,1,38.8
