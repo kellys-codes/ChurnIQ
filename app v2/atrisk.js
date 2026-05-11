@@ -81,7 +81,6 @@ function renderTable() {
         ? '<span style="color:#ef4444;font-weight:700">✕</span>'
         : '<span style="color:#9ca3af">—</span>'}</td>
       <td>${r.tariffPlan === 1 ? 'Pay-as-you-go' : 'Contractual'}</td>
-      <td style="font-weight:500">$${r.custValue.toFixed(2)}</td>
       <td>${r.status === 1
         ? '<span style="color:#3b82f6;font-weight:500">Active</span>'
         : '<span style="color:#ef4444;font-weight:500">Non-Active</span>'}</td>
@@ -95,7 +94,7 @@ function renderTable() {
         </button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:30px">No customers found</td></tr>';
+  `).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:30px">No customers found</td></tr>';
 
   renderPagination();
 }
@@ -143,7 +142,6 @@ function openActionModal(r) {
     { label: 'Risk Score',     val: r.riskScore + '%' },
     { label: 'Churned',        val: r.churn ? 'Yes' : 'No' },
     { label: 'Tariff Plan',    val: r.tariffPlan === 1 ? 'Pay-as-you-go' : 'Contractual' },
-    { label: 'Customer Value', val: '$' + r.custValue.toFixed(2) },
     { label: 'Call Failures',  val: r.callFailures },
     { label: 'Complains',      val: r.complains ? 'Yes' : 'No' },
     { label: 'Sub. Length',    val: r.subLength + ' months' },
