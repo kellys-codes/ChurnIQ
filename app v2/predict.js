@@ -1,6 +1,3 @@
-// ═══════════════════════════════════════════════════════════════
-// predict.js — ChurnIQ | Backend-Powered Prediction Engine
-// ═══════════════════════════════════════════════════════════════
 
 // ── PREDICTION VIA BACKEND API ───────────────────────────────────
 async function computeChurnPrediction(d) {
@@ -100,32 +97,32 @@ function showResult(id, r) {
   const panel = document.getElementById('result-panel');
   const badge = document.getElementById('result-badge');
   const header = document.getElementById('result-header');
-  
+
   panel.style.display = 'block';
   document.getElementById('result-cust-id').textContent = id;
-  
+
   // 1. Set the text
   badge.textContent = r.riskLevel;
-  
+
   // 2. Remove any previous color classes to prevent "color bleeding"
   badge.classList.remove('risk-low', 'risk-medium', 'risk-high');
   header.classList.remove('bg-low', 'bg-medium', 'bg-high');
-  
+
   // 3. Apply new color based on the riskLevel string
   const level = r.riskLevel.toLowerCase(); // 'low', 'medium', or 'high'
   badge.classList.add(`risk-${level}`);
   header.classList.add(`bg-${level}`);
-  
+
   // Update metrics
   document.getElementById('res-prob').textContent = r.churnProbability;
   document.getElementById('res-month').textContent = 'Month ' + r.predictedChurnMonth;
   document.getElementById('res-segment').textContent = r.segment;
   document.getElementById('res-narrative').textContent = r.narrative;
-  
+
   // Update actions
-  document.getElementById('res-actions').innerHTML = r.actions.map(a => 
+  document.getElementById('res-actions').innerHTML = r.actions.map(a =>
     `<div class="action-item"><span>${a}</span></div>`
   ).join('');
-  
+
   panel.scrollIntoView({ behavior: 'smooth' });
 }
