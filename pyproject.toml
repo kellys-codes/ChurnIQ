@@ -1,2 +1,12 @@
+[project]
+name = "churn-analysis"
+version = "0.1.0"
+description = "Flask deployment on Vercel"
+requires-python = ">=3.12"
+dependencies = [
+    "flask",
+]
+
 [tool.vercel]
-entrypoint = 'webapp.server:app'
+# Points Vercel to your Flask instance (e.g., 'app' in api/index.py)
+entrypoint = "webapp.server:app"
