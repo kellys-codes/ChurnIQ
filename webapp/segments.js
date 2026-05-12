@@ -25,23 +25,23 @@ function renderSegments(csvData) {
   // ── Segment calculations ──────────────────────────────────────
 
   // High-Risk Churners
-  const highRisk = csvData.filter(r => (r.callFailures > 5 || r.complains === 1) && (r.churn === 1 || r.status === 2));
+  const highRisk = csvData.filter(r => r.riskLevel === 'high');
   const highRiskChurnRate = highRisk.length > 0
     ? ((highRisk.filter(r => r.churn === 1).length / highRisk.length) * 100).toFixed(1) : 0;
-  const highRiskRevAtRisk = highRisk.filter(r => r.churn === 1).reduce((s, r) => s + r.custValue, 0);
+  const highRiskRevAtRisk = highRisk.filter(r => r.churn === 0).reduce((s, r) => s + r.custValue, 0);
 
   // Low Engagement
-  const lowEngage = csvData.filter(r => r.freqUse < 20 && r.freqSMS < 10 && !highRisk.includes(r));
+  const lowEngage = csvData.filter(r => r.riskLevel === 'medium' && r.freqUse < 20 && !highRisk.includes(r));
   const lowEngageChurnRate = lowEngage.length > 0
     ? ((lowEngage.filter(r => r.churn === 1).length / lowEngage.length) * 100).toFixed(1) : 0;
-  const lowEngageRevAtRisk = lowEngage.filter(r => r.churn === 1).reduce((s, r) => s + r.custValue, 0);
+  const lowEngageRevAtRisk = lowEngage.filter(r => r.churn === 0).reduce((s, r) => s + r.custValue, 0);
 
   // Pay-as-go Switchers
   const paygSwitchers = csvData.filter(r => r.tariffPlan === 1 && r.status === 1 && r.freqUse >= 20 && r.churn === 0);
   const paygUpsellOpp = paygSwitchers.reduce((s, r) => s + r.custValue, 0) * 0.15;
 
   // Loyal Base
-  const loyal = csvData.filter(r => r.subLength > 30 && r.status === 1 && r.complains === 0 && r.churn === 0);
+  const loyal = csvData.filter(r => r.riskLevel === 'low' && r.subLength > 30 && r.status === 1 && r.churn === 0);
   const loyalChurnRate = loyal.length > 0
     ? ((csvData.filter(r => r.churn === 1 && r.subLength > 30 && r.complains === 0).length / loyal.length) * 100).toFixed(1) : 0;
   const avgLoyalValue = loyal.length > 0

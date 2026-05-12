@@ -5,6 +5,8 @@
 const STORAGE_KEY = 'churniq_data';
 const ACTIONED_KEY = 'churniq_actioned';
 
+let csvData = [];
+
 // ── API CONFIGURATION ────────────────────────────────────────────
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -91,20 +93,20 @@ function normalizeRow(raw, idx) {
     return '';
   };
 
-  const callFailures  = parseFloat(get('call_failure', 'call_failures'))   || 0;
-  const complains     = parseInt  (get('complains'))                        || 0;
-  const subLength     = parseFloat(get('subscription_length'))              || 0;
-  const chargeAmount  = parseFloat(get('charge_amount'))                    || 0;
-  const secondsUse    = parseFloat(get('seconds_of_use'))                   || 0;
-  const freqUse       = parseFloat(get('frequency_of_use'))                 || 0;
-  const freqSMS       = parseFloat(get('frequency_of_sms'))                 || 0;
-  const distinctNums  = parseFloat(get('distinct_called_numbers'))          || 0;
-  const ageGroup      = parseInt  (get('age_group'))                        || 1;
-  const tariffPlan    = parseInt  (get('tariff_plan'))                      || 1;
-  const status        = parseInt  (get('status'))                           || 1;
-  const age           = parseFloat(get('age'))                              || 0;
-  const custValue     = parseFloat(get('customer_value'))                   || 0;
-  const churn         = parseInt  (get('churn'))                            || 0;
+  const callFailures = parseFloat(get('call_failure', 'call_failures')) || 0;
+  const complains = parseInt(get('complains')) || 0;
+  const subLength = parseFloat(get('subscription_length')) || 0;
+  const chargeAmount = parseFloat(get('charge_amount')) || 0;
+  const secondsUse = parseFloat(get('seconds_of_use')) || (parseFloat(get('minutes_of_use')) * 60) || 0;
+  const freqUse = parseFloat(get('frequency_of_use')) || 0;
+  const freqSMS = parseFloat(get('frequency_of_sms')) || 0;
+  const distinctNums = parseFloat(get('distinct_called_numbers')) || 0;
+  const ageGroup = parseInt(get('age_group')) || 1;
+  const tariffPlan = parseInt(get('tariff_plan')) || 1;
+  const status = parseInt(get('status')) || 1;
+  const age = parseFloat(get('age')) || 0;
+  const custValue = parseFloat(get('customer_value')) || 0;
+  const churn = parseInt(get('churn')) || 0;
 
   // riskScore is filled later by the batch API call
   return {
@@ -196,7 +198,7 @@ function processFile(file) {
     try {
       document.getElementById('loading-text').textContent = 'Parsing CSV data…';
       const raw = parseCSV(ev.target.result);
-      const csvData = raw.map((r, i) => normalizeRow(r, i));
+      csvData = raw.map((r, i) => normalizeRow(r, i));
 
       // Call backend API for batch risk scoring
       document.getElementById('loading-text').textContent =
@@ -239,6 +241,11 @@ function updateDataStatus(count) {
 
 // Init status on every page load
 document.addEventListener('DOMContentLoaded', () => {
-  const data = loadCSVData();
-  updateDataStatus(data.length);
+  csvData = loadCSVData();
+  updateDataStatus(csvData.length);
+  if (csvData.length > 0 && typeof onDataLoaded === 'function') {
+    onDataLoaded(csvData);
+  } else if (csvData.length === 0 && typeof onNoData === 'function') {
+    onNoData();
+  }
 });
