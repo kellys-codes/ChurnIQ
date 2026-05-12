@@ -172,113 +172,45 @@ function updateAgeGroupChart() {
 
 // ─── XGBoost AFT Survival Curve ───
 
-let _dashboardXgbModel = null;
-
-async function loadDashboardXGBModel() {
-  if (_dashboardXgbModel) return _dashboardXgbModel;
-  try {
-    const resp = await fetch('model.json');
-    _dashboardXgbModel = await resp.json();
-    return _dashboardXgbModel;
-  } catch (err) {
-    console.error('Failed to load XGBoost model:', err);
-    return null;
-  }
-}
-
-function dashPredictTree(tree, features) {
-  let nodeIdx = 0;
-  while (true) {
-    const leftChild = tree.left_children[nodeIdx];
-    if (leftChild === -1) return tree.base_weights[nodeIdx];
-    const splitFeature = tree.split_indices[nodeIdx];
-    const splitValue = tree.split_conditions[nodeIdx];
-    const featureVal = features[splitFeature];
-    nodeIdx = (featureVal < splitValue) ? leftChild : tree.right_children[nodeIdx];
-  }
-}
-
-function dashErf(x) {
-  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
-  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
-  const sign = x < 0 ? -1 : 1;
-  x = Math.abs(x);
-  const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-  return sign * y;
-}
-
-function parseBaseScore(model) {
-  const raw = model.learner?.learner_model_param?.base_score || '0';
-  const val = parseFloat(String(raw).replace(/[\[\]]/g, ''));
-  return isNaN(val) ? 0 : val;
-}
-
-// Corrected: Returns logTime (mu), matches predict.js logic
-function xgbPredictLogTime(model, features) {
-  const trees = model.learner.gradient_booster.model.trees;
-  let logTime = parseBaseScore(model);
-  for (const tree of trees) {
-    logTime += dashPredictTree(tree, features);
-  }
-  return logTime;
-}
-
-// Corrected: Uses Log-Normal S(t) = 1 - Phi((ln(t) - mu) / sigma)
-function logNormalSurvival(month, logTime, sigma) {
-  if (month <= 0) return 1.0;
-  const z = (Math.log(month) - logTime) / sigma;
-  const churnProb = 0.5 * (1 + dashErf(z / Math.sqrt(2)));
-  const surv = 1 - churnProb;
-  if (z < -5) return 1.0;
-  if (z > 5) return 0.0;
-  return isNaN(surv) ? 0.5 : surv;
-}
-
-function buildFeatureVectorFromRow(row) {
-  return [
-    row.callFailures || 0,
-    row.complains || 0,
-    row.chargeAmount || 0,
-    row.freqUse || 0,
-    row.freqSMS || 0,
-    row.distinctNums || 0,
-    row.ageGroup || 1,
-    row.tariffPlan || 1,
-    (row.secondsUse || 0) / 60 // convert seconds to minutes
-  ];
-}
-
 async function updateSurvivalChart() {
   const n = csvData.length;
   if (n === 0) return;
 
-  const model = await loadDashboardXGBModel();
-  if (!model) return;
+  const payload = csvData.map(r => ({
+    call_failure: r.callFailures,
+    complains: r.complains,
+    charge_amount: r.chargeAmount,
+    frequency_of_use: r.freqUse,
+    frequency_of_sms: r.freqSMS,
+    distinct_called_numbers: r.distinctNums,
+    age_group: r.ageGroup,
+    tariff_plan: r.tariffPlan,
+    seconds_of_use: r.secondsUse
+  }));
 
-  // Extract learned sigma (scale)
-  const sigma = parseFloat(model.learner?.learner_model_param?.aft_loss_distribution_scale || '1.0');
-
-  // Pre-compute logTimes for population
-  const featureVectors = csvData.map(r => buildFeatureVectorFromRow(r));
-  const logTimes = featureVectors.map(fv => xgbPredictLogTime(model, fv));
-
-  const maxTime = 48;
-  const labels = [];
-  const values = [];
-
-  for (let month = 0; month <= maxTime; month++) {
-    labels.push(month);
-    if (month === 0) {
-      values.push(100);
-      continue;
+  let values = [];
+  try {
+    const resp = await fetch(`${API_BASE_URL}/predict/survival`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: payload })
+    });
+    
+    if (!resp.ok) {
+      throw new Error(`API error ${resp.status}`);
     }
-    let totalSurvival = 0;
-    for (const lt of logTimes) {
-      totalSurvival += logNormalSurvival(month, lt, sigma);
-    }
-    values.push(parseFloat(((totalSurvival / n) * 100).toFixed(2)));
+    
+    const data = await resp.json();
+    values = data.survival_curve || [];
+  } catch (err) {
+    console.error('Failed to load survival curve from backend:', err);
+    return;
   }
+
+  if (values.length === 0) return;
+
+  const maxTime = values.length - 1;
+  const labels = Array.from({length: maxTime + 1}, (_, i) => i);
 
   const finalSurvival = values[values.length - 1];
   const medianMonthIdx = values.findIndex(v => v <= 50);
@@ -320,4 +252,4 @@ async function updateSurvivalChart() {
       }
     }
   });
-}
+}

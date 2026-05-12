@@ -64,6 +64,19 @@ def _erf(x: float) -> float:
     return sign * y
 
 
+def _vectorized_erf(x: np.ndarray) -> np.ndarray:
+    """Vectorized approximate error function."""
+    p = 0.3275911
+    a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
+    sign = np.sign(x)
+    sign = np.where(sign == 0, 1, sign)
+    x_abs = np.abs(x)
+    t = 1.0 / (1.0 + p * x_abs)
+    y = 1.0 - (((((a[4] * t + a[3]) * t + a[2]) * t + a[1]) * t + a[0]) * t * np.exp(-x_abs * x_abs))
+    return sign * y
+
+
+
 def compute_risk_score(features: dict) -> int:
     """
     Run XGBoost prediction and return a 0-100 risk score.
@@ -139,6 +152,64 @@ def predict_batch():
         return jsonify({"predictions": predictions})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/predict/survival", methods=["POST"])
+def predict_survival():
+    """Batch survival curve prediction for dashboard."""
+    body = request.get_json(force=True)
+    rows = body.get("rows")
+    if not rows or not isinstance(rows, list):
+        return jsonify({"error": "Missing 'rows' array in request body"}), 400
+    
+    if not rows:
+        return jsonify({"survival_curve": []})
+        
+    try:
+        features_list = []
+        for r in rows:
+            features_list.append([
+                float(r.get("call_failure", 0)),
+                float(r.get("complains", 0)),
+                float(r.get("charge_amount", 0)),
+                float(r.get("frequency_of_use", 0)),
+                float(r.get("frequency_of_sms", 0)),
+                float(r.get("distinct_called_numbers", 0)),
+                float(r.get("age_group", 1)),
+                float(r.get("tariff_plan", 1)),
+                float(r.get("seconds_of_use", 0)) / 60.0
+            ])
+            
+        row_arr = np.array(features_list, dtype=np.float32)
+        dmat = xgb.DMatrix(row_arr)
+        log_times = booster.predict(dmat)
+        
+        resolved = os.path.abspath(MODEL_PATH)
+        with open(resolved, "r") as f:
+            meta = json.load(f)
+        sigma_str = meta.get("learner", {}).get("learner_model_param", {}).get("aft_loss_distribution_scale", "1.0")
+        sigma = float(sigma_str)
+        
+        curve = []
+        for month in range(49):
+            if month == 0:
+                curve.append(100.0)
+                continue
+            z = (math.log(month) - log_times) / sigma
+            churn_prob = 0.5 * (1.0 + _vectorized_erf(z / math.sqrt(2)))
+            surv = 1.0 - churn_prob
+            
+            # fix edges
+            surv = np.where(z < -5, 1.0, surv)
+            surv = np.where(z > 5, 0.0, surv)
+            
+            avg_surv = float(np.mean(surv) * 100.0)
+            curve.append(round(avg_surv, 2))
+            
+        return jsonify({"survival_curve": curve})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/health", methods=["GET"])
