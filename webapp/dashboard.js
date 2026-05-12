@@ -2,6 +2,8 @@ let donutChart = null;
 let subLengthChart = null;
 let ageGroupChart = null;
 let survivalChart = null;
+let chargeAmountChart = null;
+let distinctNumbersChart = null;
 
 // Called by common.js when data is available
 function onDataLoaded() {
@@ -12,6 +14,8 @@ function onDataLoaded() {
   updateDonut();
   updateSubLengthChart();
   updateAgeGroupChart();
+  updateChargeAmountChart();
+  updateDistinctNumbersChart();
   updateSurvivalChart();
 }
 
@@ -169,6 +173,67 @@ function updateAgeGroupChart() {
     }
   });
 }
+
+// ─── Charge Amount Chart ───
+function updateChargeAmountChart() {
+  const groups = Array.from(new Set(csvData.map(r => r.chargeAmount))).sort((a, b) => a - b);
+  const rates = groups.map(g => {
+    const inGroup = csvData.filter(r => r.chargeAmount === g);
+    if (!inGroup.length) return 0;
+    const churned = inGroup.filter(r => r.churn === 1).length;
+    return parseFloat(((churned / inGroup.length) * 100).toFixed(1));
+  });
+
+  if (chargeAmountChart) chargeAmountChart.destroy();
+  chargeAmountChart = new Chart(document.getElementById('chargeAmountChart'), {
+    type: 'bar',
+    data: {
+      labels: groups.map(g => 'Tier ' + g),
+      datasets: [{ label: 'Churn Rate %', data: rates, backgroundColor: rates.map(r => r > 20 ? 'rgba(239,68,68,0.7)' : 'rgba(59,130,246,0.7)'), borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, callback: v => v + '%' }, max: (Math.max(...rates) || 0) + 5 }
+      }
+    }
+  });
+}
+
+// ─── Distinct Called Numbers Chart ───
+function updateDistinctNumbersChart() {
+  const buckets = {};
+  csvData.forEach(r => {
+    const bucket = Math.floor(r.distinctNums / 10) * 10;
+    if (!buckets[bucket]) buckets[bucket] = { total: 0, churned: 0 };
+    buckets[bucket].total += 1;
+    if (r.churn === 1) buckets[bucket].churned += 1;
+  });
+
+  const keys = Object.keys(buckets).sort((a, b) => a - b);
+  const labels = keys.map(k => `${k}-${parseInt(k) + 9}`);
+  const rates = keys.map(k => parseFloat(((buckets[k].churned / buckets[k].total) * 100).toFixed(1)));
+
+  if (distinctNumbersChart) distinctNumbersChart.destroy();
+  distinctNumbersChart = new Chart(document.getElementById('distinctNumbersChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ label: 'Churn Rate %', data: rates, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, callback: v => v + '%' }, max: (Math.max(...rates) || 0) + 5 }
+      }
+    }
+  });
+}
+
 
 // ─── XGBoost AFT Survival Curve ───
 
