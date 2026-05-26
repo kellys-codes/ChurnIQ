@@ -75,7 +75,7 @@ function parseCSV(text) {
   return rows;
 }
 
-function normalizeRow(raw, idx) {
+function normalizeRow(raw, idx, churnInCustValueCol = false) {
   // Normalise a key: lowercase, collapse any run of spaces/underscores to a
   // single underscore, strip leading/trailing underscores.
   // e.g. "Call  Failure" → "call_failure",  "call__failure" → "call_failure"
@@ -103,10 +103,17 @@ function normalizeRow(raw, idx) {
   const distinctNums = parseFloat(get('distinct_called_numbers')) || 0;
   const ageGroup = parseInt(get('age_group')) || 1;
   const tariffPlan = parseInt(get('tariff_plan')) || 1;
-  const status = parseInt(get('status')) || 1;
+  // df_test.csv has age values (15/25/30/45/55) in the Status column due to column mislabeling.
+  // Clamp to valid values: 1=Active, 2=Non-active. Default to Active when the field is unrecognized.
+  const rawStatus = parseInt(get('status')) || 0;
+  const status = (rawStatus === 1 || rawStatus === 2) ? rawStatus : 1;
   const age = parseFloat(get('age')) || 0;
-  const custValue = parseFloat(get('customer_value')) || 0;
-  const churn = parseInt(get('churn')) || 0;
+  const rawChurn = parseFloat(get('churn')) || 0;
+  const rawCustValue = parseFloat(get('customer_value')) || 0;
+  // df_test.csv format: binary churn label is in "Customer Value" column;
+  // "Churn" column contains a continuous score (customer value amount)
+  const churn = churnInCustValueCol ? Math.round(rawCustValue) : (rawChurn > 0.5 ? 1 : 0);
+  const custValue = churnInCustValueCol ? rawChurn : rawCustValue;
 
   // riskScore is filled later by the batch API call
   return {
@@ -130,7 +137,7 @@ async function fetchBatchPredictions(rows) {
     distinct_called_numbers: r.distinctNums,
     age_group: r.ageGroup,
     tariff_plan: r.tariffPlan,
-    seconds_of_use: r.secondsUse
+    minutes_of_use: r.secondsUse / 60
   }));
 
   const resp = await fetch(`${API_BASE_URL}/predict/batch`, {
@@ -198,7 +205,16 @@ function processFile(file) {
     try {
       document.getElementById('loading-text').textContent = 'Parsing CSV data…';
       const raw = parseCSV(ev.target.result);
-      csvData = raw.map((r, i) => normalizeRow(r, i));
+      // Detect df_test.csv format: "Churn" column has continuous values >1,
+      // meaning the binary churn label is actually in the "Customer Value" column
+      const normKey = k => k.toLowerCase().replace(/[\s_]+/g, '_').replace(/^_|_$/g, '');
+      const churnInCustValueCol = raw.some(r => {
+        const churnKey = Object.keys(r).find(k => normKey(k) === 'churn');
+        if (!churnKey) return false;
+        const v = parseFloat(r[churnKey]);
+        return !isNaN(v) && v > 1;
+      });
+      csvData = raw.map((r, i) => normalizeRow(r, i, churnInCustValueCol));
 
       // Call backend API for batch risk scoring
       document.getElementById('loading-text').textContent =
