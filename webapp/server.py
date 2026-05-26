@@ -13,7 +13,7 @@ CORS(app)
 # ── Model Loading ─────────────────────────────────────────────
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "model.json"),
+    os.path.join(os.path.dirname(__file__), "model.json"),
 )
 
 booster = None
