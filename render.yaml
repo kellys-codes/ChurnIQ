@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: churniq-api
+    runtime: python
+    buildCommand: pip install -r webapp/requirements.txt
+    startCommand: gunicorn --chdir webapp server:app
+    envVars:
+      - key: CHURNIQ_MODEL_PATH
+        value: ./model.json
