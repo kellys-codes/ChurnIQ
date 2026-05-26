@@ -251,7 +251,7 @@ function closeDeleteModalIfOutside(e) {
 async function confirmDeleteAllData() {
   closeDeleteModal();
   document.getElementById('loading-overlay').classList.remove('hidden');
-  document.getElementById('loading-text').textContent = 'Deleting all data from MongoDB…';
+  document.getElementById('loading-text').textContent = 'Deleting all data from database…';
   try {
     const result = await deleteFromMongo();
     // Clear local cache too
@@ -259,9 +259,8 @@ async function confirmDeleteAllData() {
     localStorage.removeItem(ACTIONED_KEY);
     csvData = [];
     document.getElementById('loading-overlay').classList.add('hidden');
-    showToast(`✓ Deleted ${result.deleted || 0} customer records from MongoDB`, 'success');
-    updateDataStatus(0);
-    if (typeof onNoData === 'function') onNoData();
+    showToast(`✓ Deleted ${result.deleted || 0} customer records from database`, 'success');
+    window.location.href = 'index.html';
   } catch (err) {
     document.getElementById('loading-overlay').classList.add('hidden');
     showToast('Delete failed: ' + err.message, 'error');
@@ -299,7 +298,7 @@ function processFile(file) {
 
       // Save to MongoDB
       document.getElementById('loading-text').textContent =
-        `Saving ${csvData.length.toLocaleString()} customers to MongoDB…`;
+        `Saving ${csvData.length.toLocaleString()} customers to databse…`;
       try {
         const saveResult = await saveToMongo(csvData, file.name);
         console.log(`[ChurnIQ] MongoDB save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
