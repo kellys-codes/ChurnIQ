@@ -2,7 +2,7 @@
 // common.js  —  ChurnIQ  |  Common utilities for all pages
 // ═══════════════════════════════════════════════════════════════
 
-const STORAGE_KEY = 'churniq_data';
+const STORAGE_KEY  = 'churniq_data';
 const ACTIONED_KEY = 'churniq_actioned';
 
 let csvData = [];
@@ -11,7 +11,7 @@ let csvData = [];
 const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : '';
 
-// ── DATA PERSISTENCE ─────────────────────────────────────────────
+// ── DATA PERSISTENCE (localStorage — used as in-memory cache) ────
 function loadCSVData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -36,18 +36,70 @@ function saveActionedSet(set) {
   catch (e) { }
 }
 
-// ── CSV PARSER ───────────────────────────────────────────────────
+// ── MONGODB API HELPERS ──────────────────────────────────────────
+
 /**
- * Robust CSV parser: handles \r\n line endings and double-quoted fields
- * (including commas inside quotes). Normalises headers to lowercase_underscore.
+ * Save all customer records to MongoDB.
+ * @param {Array}  customers  - normalised + scored rows
+ * @param {string} filename   - original CSV filename
  */
+async function saveToMongo(customers, filename = 'import.csv') {
+  const resp = await fetch(`${API_BASE_URL}/data/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customers, filename })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || `MongoDB save error ${resp.status}`);
+  }
+  return resp.json(); // { ok, inserted, session_id }
+}
+
+/**
+ * Load all customer records from MongoDB.
+ * Falls back to localStorage cache on failure.
+ */
+async function loadFromMongo() {
+  const resp = await fetch(`${API_BASE_URL}/data/load`);
+  if (!resp.ok) throw new Error(`MongoDB load error ${resp.status}`);
+  const { customers } = await resp.json();
+  return customers || [];
+}
+
+/**
+ * Delete ALL data from MongoDB (and clear localStorage cache).
+ */
+async function deleteFromMongo() {
+  const resp = await fetch(`${API_BASE_URL}/data/delete`, { method: 'DELETE' });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || `MongoDB delete error ${resp.status}`);
+  }
+  return resp.json(); // { ok, deleted }
+}
+
+/**
+ * Get MongoDB connection status + record count.
+ */
+async function getMongoStatus() {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/data/status`);
+    if (!resp.ok) return { connected: false, count: 0 };
+    return resp.json();
+  } catch (e) {
+    return { connected: false, count: 0 };
+  }
+}
+
+// ── CSV PARSER ───────────────────────────────────────────────────
 function parseCSVLine(line) {
   const fields = [];
   let cur = '', inQ = false;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (c === '"') {
-      if (inQ && line[i + 1] === '"') { cur += '"'; i++; } // escaped quote
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
       else inQ = !inQ;
     } else if (c === ',' && !inQ) {
       fields.push(cur.trim()); cur = '';
@@ -77,12 +129,7 @@ function parseCSV(text) {
 }
 
 function normalizeRow(raw, idx, churnInCustValueCol = false) {
-  // Normalise a key: lowercase, collapse any run of spaces/underscores to a
-  // single underscore, strip leading/trailing underscores.
-  // e.g. "Call  Failure" → "call_failure",  "call__failure" → "call_failure"
   const norm = s => s.toLowerCase().replace(/[\s_]+/g, '_').replace(/^_|_$/g, '');
-
-  // Build a normalised-key → original-value lookup once per row
   const normMap = {};
   for (const k of Object.keys(raw)) normMap[norm(k)] = raw[k];
 
@@ -94,29 +141,24 @@ function normalizeRow(raw, idx, churnInCustValueCol = false) {
     return '';
   };
 
-  const callFailures = parseFloat(get('call_failure', 'call_failures')) || 0;
-  const complains = parseInt(get('complains')) || 0;
-  const subLength = parseFloat(get('subscription_length')) || 0;
-  const chargeAmount = parseFloat(get('charge_amount')) || 0;
-  const secondsUse = parseFloat(get('seconds_of_use')) || (parseFloat(get('minutes_of_use')) * 60) || 0;
-  const freqUse = parseFloat(get('frequency_of_use')) || 0;
-  const freqSMS = parseFloat(get('frequency_of_sms')) || 0;
-  const distinctNums = parseFloat(get('distinct_called_numbers')) || 0;
-  const ageGroup = parseInt(get('age_group')) || 1;
-  const tariffPlan = parseInt(get('tariff_plan')) || 1;
-  // df_test.csv has age values (15/25/30/45/55) in the Status column due to column mislabeling.
-  // Clamp to valid values: 1=Active, 2=Non-active. Default to Active when the field is unrecognized.
-  const rawStatus = parseInt(get('status')) || 0;
-  const status = (rawStatus === 1 || rawStatus === 2) ? rawStatus : 1;
-  const age = parseFloat(get('age')) || 0;
-  const rawChurn = parseFloat(get('churn')) || 0;
-  const rawCustValue = parseFloat(get('customer_value')) || 0;
-  // df_test.csv format: binary churn label is in "Customer Value" column;
-  // "Churn" column contains a continuous score (customer value amount)
-  const churn = churnInCustValueCol ? Math.round(rawCustValue) : (rawChurn > 0.5 ? 1 : 0);
-  const custValue = churnInCustValueCol ? rawChurn : rawCustValue;
+  const callFailures  = parseFloat(get('call_failure', 'call_failures')) || 0;
+  const complains     = parseInt(get('complains')) || 0;
+  const subLength     = parseFloat(get('subscription_length')) || 0;
+  const chargeAmount  = parseFloat(get('charge_amount')) || 0;
+  const secondsUse    = parseFloat(get('seconds_of_use')) || (parseFloat(get('minutes_of_use')) * 60) || 0;
+  const freqUse       = parseFloat(get('frequency_of_use')) || 0;
+  const freqSMS       = parseFloat(get('frequency_of_sms')) || 0;
+  const distinctNums  = parseFloat(get('distinct_called_numbers')) || 0;
+  const ageGroup      = parseInt(get('age_group')) || 1;
+  const tariffPlan    = parseInt(get('tariff_plan')) || 1;
+  const rawStatus     = parseInt(get('status')) || 0;
+  const status        = (rawStatus === 1 || rawStatus === 2) ? rawStatus : 1;
+  const age           = parseFloat(get('age')) || 0;
+  const rawChurn      = parseFloat(get('churn')) || 0;
+  const rawCustValue  = parseFloat(get('customer_value')) || 0;
+  const churn         = churnInCustValueCol ? Math.round(rawCustValue) : (rawChurn > 0.5 ? 1 : 0);
+  const custValue     = churnInCustValueCol ? rawChurn : rawCustValue;
 
-  // riskScore is filled later by the batch API call
   return {
     id: `CUST-${String(idx + 1).padStart(5, '0')}`,
     callFailures, complains, subLength, chargeAmount,
@@ -195,6 +237,37 @@ function handleFileSelect(e) {
   e.target.value = '';
 }
 
+// ── DELETE CONFIRM MODAL ─────────────────────────────────────────
+function openDeleteModal() {
+  document.getElementById('delete-modal-overlay').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('delete-modal-overlay').classList.remove('open');
+}
+function closeDeleteModalIfOutside(e) {
+  if (e.target === e.currentTarget) closeDeleteModal();
+}
+
+async function confirmDeleteAllData() {
+  closeDeleteModal();
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-text').textContent = 'Deleting all data from MongoDB…';
+  try {
+    const result = await deleteFromMongo();
+    // Clear local cache too
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ACTIONED_KEY);
+    csvData = [];
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showToast(`✓ Deleted ${result.deleted || 0} customer records from MongoDB`, 'success');
+    updateDataStatus(0);
+    if (typeof onNoData === 'function') onNoData();
+  } catch (err) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showToast('Delete failed: ' + err.message, 'error');
+  }
+}
+
 // ── FILE PROCESSING ──────────────────────────────────────────────
 function processFile(file) {
   closeModal();
@@ -206,8 +279,6 @@ function processFile(file) {
     try {
       document.getElementById('loading-text').textContent = 'Parsing CSV data…';
       const raw = parseCSV(ev.target.result);
-      // Detect df_test.csv format: "Churn" column has continuous values >1,
-      // meaning the binary churn label is actually in the "Customer Value" column
       const normKey = k => k.toLowerCase().replace(/[\s_]+/g, '_').replace(/^_|_$/g, '');
       const churnInCustValueCol = raw.some(r => {
         const churnKey = Object.keys(r).find(k => normKey(k) === 'churn');
@@ -217,19 +288,30 @@ function processFile(file) {
       });
       csvData = raw.map((r, i) => normalizeRow(r, i, churnInCustValueCol));
 
-      // Call backend API for batch risk scoring
       document.getElementById('loading-text').textContent =
         `Running XGBoost inference on ${csvData.length.toLocaleString()} customers…`;
-
       const scores = await fetchBatchPredictions(csvData);
 
-      // Merge scores into the data
       for (let i = 0; i < csvData.length; i++) {
         csvData[i].riskScore = scores[i];
         csvData[i].riskLevel = scores[i] >= 65 ? 'high' : scores[i] >= 35 ? 'medium' : 'low';
       }
 
+      // Save to MongoDB
+      document.getElementById('loading-text').textContent =
+        `Saving ${csvData.length.toLocaleString()} customers to MongoDB…`;
+      try {
+        const saveResult = await saveToMongo(csvData, file.name);
+        console.log(`[ChurnIQ] MongoDB save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
+      } catch (mongoErr) {
+        // Non-fatal: warn but continue with localStorage fallback
+        console.warn('[ChurnIQ] MongoDB save failed (using localStorage fallback):', mongoErr.message);
+        showToast('⚠ MongoDB unavailable — data saved locally only', 'error');
+      }
+
+      // Always save to localStorage as cache
       saveCSVData(csvData);
+
       document.getElementById('loading-overlay').classList.add('hidden');
       showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
       updateDataStatus(csvData.length);
@@ -245,7 +327,7 @@ function processFile(file) {
 
 // ── DATA STATUS BAR ──────────────────────────────────────────────
 function updateDataStatus(count) {
-  const dot = document.getElementById('status-dot');
+  const dot  = document.getElementById('status-dot');
   const text = document.getElementById('status-text');
   if (count > 0) {
     dot.classList.remove('none');
@@ -256,10 +338,32 @@ function updateDataStatus(count) {
   }
 }
 
-// Init status on every page load
-document.addEventListener('DOMContentLoaded', () => {
-  csvData = loadCSVData();
+// ── INIT ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Try to load from MongoDB first; fall back to localStorage cache
+  let loaded = false;
+  try {
+    const status = await getMongoStatus();
+    if (status.connected && status.count > 0) {
+      document.getElementById('loading-text') &&
+        (document.getElementById('loading-text').textContent = 'Loading data from MongoDB…');
+      const mongoData = await loadFromMongo();
+      if (mongoData.length > 0) {
+        csvData = mongoData;
+        saveCSVData(csvData); // refresh local cache
+        loaded = true;
+      }
+    }
+  } catch (e) {
+    console.warn('[ChurnIQ] Could not reach MongoDB on init, falling back to localStorage:', e.message);
+  }
+
+  if (!loaded) {
+    csvData = loadCSVData();
+  }
+
   updateDataStatus(csvData.length);
+
   if (csvData.length > 0 && typeof onDataLoaded === 'function') {
     onDataLoaded(csvData);
   } else if (csvData.length === 0 && typeof onNoData === 'function') {

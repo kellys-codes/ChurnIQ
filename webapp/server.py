@@ -6,6 +6,12 @@ import numpy as np
 import xgboost as xgb
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
+from bson import ObjectId
+from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -31,6 +37,47 @@ FEATURE_NAMES = [
     "Minutes of Use",
 ]
 
+# ── MongoDB Setup ─────────────────────────────────────────────
+# Set MONGODB_URI environment variable, e.g.:
+#   export MONGODB_URI="mongodb://localhost:27017"
+# or for MongoDB Atlas:
+#   export MONGODB_URI="mongodb+srv://<user>:<pass>@cluster.mongodb.net"
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DB  = os.environ.get("MONGODB_DB", "churniq")
+
+mongo_client = None
+db = None
+
+
+def connect_mongo():
+    """Connect to MongoDB once at startup."""
+    global mongo_client, db
+    try:
+        mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        # Ping to verify connection
+        mongo_client.admin.command("ping")
+        db = mongo_client[MONGODB_DB]
+        print(f"[ChurnIQ] MongoDB connected → {MONGODB_URI} / db={MONGODB_DB}")
+    except ConnectionFailure as e:
+        print(f"[ChurnIQ] WARNING: MongoDB connection failed: {e}")
+        print("[ChurnIQ] Running without MongoDB — data will not persist.")
+        mongo_client = None
+        db = None
+
+
+def get_collection():
+    """Return the customers collection, or None if not connected."""
+    if db is None:
+        return None
+    return db["customers"]
+
+
+def get_sessions_collection():
+    """Return the sessions collection for tracking import batches."""
+    if db is None:
+        return None
+    return db["sessions"]
+
 
 def load_model():
     """Load the XGBoost booster once at startup."""
@@ -39,12 +86,10 @@ def load_model():
     print(f"[ChurnIQ] Loading model from {resolved}")
     booster = xgb.Booster()
     booster.load_model(resolved)
-    
-    # Print names to debug if needed, then clear them to avoid mismatch errors
+
     print(f"[ChurnIQ] Booster feature names: {booster.feature_names}")
     booster.feature_names = None
 
-    # Parse base_score from the JSON metadata
     with open(resolved, "r") as f:
         meta = json.load(f)
     raw_bs = meta.get("learner", {}).get("learner_model_param", {}).get("base_score", "0.5")
@@ -54,7 +99,6 @@ def load_model():
 
 # ── Inference Helpers ─────────────────────────────────────────
 def _erf(x: float) -> float:
-    """Approximate error function (Abramowitz & Stegun)."""
     p = 0.3275911
     a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
     sign = -1 if x < 0 else 1
@@ -65,7 +109,6 @@ def _erf(x: float) -> float:
 
 
 def _vectorized_erf(x: np.ndarray) -> np.ndarray:
-    """Vectorized approximate error function."""
     p = 0.3275911
     a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
     sign = np.sign(x)
@@ -76,24 +119,15 @@ def _vectorized_erf(x: np.ndarray) -> np.ndarray:
     return sign * y
 
 
-
 def compute_risk_score(features: dict) -> int:
-    """
-    Run XGBoost prediction and return a 0-100 risk score.
-
-    Features dict keys:
-      call_failure, complains, charge_amount, frequency_of_use,
-      frequency_of_sms, distinct_called_numbers, age_group,
-      tariff_plan, minutes_of_use
-    """
-    call_failure = float(features.get("call_failure", 0))
-    complains = float(features.get("complains", 0))
+    call_failure  = float(features.get("call_failure", 0))
+    complains     = float(features.get("complains", 0))
     charge_amount = float(features.get("charge_amount", 0))
-    freq_use = float(features.get("frequency_of_use", 0))
-    freq_sms = float(features.get("frequency_of_sms", 0))
-    distinct = float(features.get("distinct_called_numbers", 0))
-    age_group = float(features.get("age_group", 1))
-    tariff_plan = float(features.get("tariff_plan", 1))
+    freq_use      = float(features.get("frequency_of_use", 0))
+    freq_sms      = float(features.get("frequency_of_sms", 0))
+    distinct      = float(features.get("distinct_called_numbers", 0))
+    age_group     = float(features.get("age_group", 1))
+    tariff_plan   = float(features.get("tariff_plan", 1))
     minutes_of_use = float(features.get("minutes_of_use", 0))
 
     row = np.array(
@@ -102,16 +136,12 @@ def compute_risk_score(features: dict) -> int:
         dtype=np.float32,
     )
     dmat = xgb.DMatrix(row)
-
-    # XGBoost survival:aft predict() returns T (predicted months), not log(T)
     predicted_time = max(float(booster.predict(dmat)[0]), 1e-9)
 
-    # AFT CDF — probability of churn within 36 months
-    sigma = 1.0  # default distribution scale
+    sigma = 1.0
     z = (math.log(36) - math.log(predicted_time)) / sigma
     risk = 0.5 * (1.0 + _erf(z / math.sqrt(2)))
 
-    # Calibration multipliers (match predict.js behaviour)
     if call_failure > 0:
         risk += call_failure * 0.03
     if complains > 0:
@@ -119,15 +149,13 @@ def compute_risk_score(features: dict) -> int:
     if minutes_of_use < 30 and freq_use < 5:
         risk = max(risk, 0.85)
 
-    # Clamp to 1-99 then scale to 0-100
     final = min(max(risk, 0.01), 0.99)
     return min(max(round(final * 100), 0), 100)
 
 
-# ── Routes ────────────────────────────────────────────────────
+# ── Prediction Routes ─────────────────────────────────────────
 @app.route("/predict", methods=["POST"])
 def predict_single():
-    """Single customer prediction."""
     body = request.get_json(force=True)
     features = body.get("features")
     if not features:
@@ -141,7 +169,6 @@ def predict_single():
 
 @app.route("/predict/batch", methods=["POST"])
 def predict_batch():
-    """Batch prediction for CSV import (many rows at once)."""
     body = request.get_json(force=True)
     rows = body.get("rows")
     if not rows or not isinstance(rows, list):
@@ -155,15 +182,12 @@ def predict_batch():
 
 @app.route("/predict/survival", methods=["POST"])
 def predict_survival():
-    """Batch survival curve prediction for dashboard."""
     body = request.get_json(force=True)
     rows = body.get("rows")
     if not rows or not isinstance(rows, list):
         return jsonify({"error": "Missing 'rows' array in request body"}), 400
-    
     if not rows:
         return jsonify({"survival_curve": []})
-        
     try:
         features_list = []
         for r in rows:
@@ -178,10 +202,9 @@ def predict_survival():
                 float(r.get("tariff_plan", 1)),
                 float(r.get("minutes_of_use", 0))
             ])
-            
+
         row_arr = np.array(features_list, dtype=np.float32)
         dmat = xgb.DMatrix(row_arr)
-        # predict() returns T (predicted months), not log(T)
         predicted_times = np.maximum(booster.predict(dmat), 1e-9)
         log_predicted = np.log(predicted_times)
 
@@ -199,28 +222,132 @@ def predict_survival():
             z = (math.log(month) - log_predicted) / sigma
             churn_prob = 0.5 * (1.0 + _vectorized_erf(z / math.sqrt(2)))
             surv = 1.0 - churn_prob
-
-            # fix edges
             surv = np.where(z < -5, 1.0, surv)
             surv = np.where(z > 5, 0.0, surv)
-            
             avg_surv = float(np.mean(surv) * 100.0)
             curve.append(round(avg_surv, 2))
-            
+
         return jsonify({"survival_curve": curve})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
+# ── MongoDB Data Routes ───────────────────────────────────────
+
+@app.route("/data/save", methods=["POST"])
+def data_save():
+    """
+    Save (upsert) a batch of customer records to MongoDB.
+    Body: { "customers": [ {...}, ... ], "filename": "my.csv" }
+    Each customer doc should already have riskScore, riskLevel, etc.
+    The endpoint APPENDS to existing data (does not replace).
+    """
+    col = get_collection()
+    if col is None:
+        return jsonify({"error": "MongoDB not connected"}), 503
+
+    body = request.get_json(force=True)
+    customers = body.get("customers", [])
+    filename  = body.get("filename", "unknown.csv")
+
+    if not customers:
+        return jsonify({"error": "No customers provided"}), 400
+
+    try:
+        # Create a session record
+        sessions = get_sessions_collection()
+        session_doc = {
+            "filename": filename,
+            "imported_at": datetime.utcnow().isoformat(),
+            "count": len(customers)
+        }
+        session_result = sessions.insert_one(session_doc)
+        session_id = str(session_result.inserted_id)
+
+        # Attach session_id to each customer and insert
+        for c in customers:
+            c["session_id"] = session_id
+            c["imported_at"] = session_doc["imported_at"]
+            # Remove _id if present to avoid conflicts
+            c.pop("_id", None)
+
+        result = col.insert_many(customers)
+        inserted = len(result.inserted_ids)
+
+        return jsonify({
+            "ok": True,
+            "inserted": inserted,
+            "session_id": session_id
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/data/load", methods=["GET"])
+def data_load():
+    """
+    Load all customer records from MongoDB.
+    Returns: { "customers": [...], "count": N }
+    _id fields are stringified for JSON compatibility.
+    """
+    col = get_collection()
+    if col is None:
+        return jsonify({"error": "MongoDB not connected"}), 503
+
+    try:
+        docs = list(col.find({}, {"_id": 0}))  # exclude _id from response
+        return jsonify({"customers": docs, "count": len(docs)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/data/delete", methods=["DELETE"])
+def data_delete():
+    """
+    Delete ALL customer records and sessions from MongoDB.
+    Returns: { "ok": true, "deleted": N }
+    """
+    col      = get_collection()
+    sessions = get_sessions_collection()
+    if col is None:
+        return jsonify({"error": "MongoDB not connected"}), 503
+
+    try:
+        result   = col.delete_many({})
+        sessions.delete_many({})
+        return jsonify({"ok": True, "deleted": result.deleted_count})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/data/status", methods=["GET"])
+def data_status():
+    """
+    Quick health check — returns how many records are in MongoDB.
+    Returns: { "connected": bool, "count": N, "sessions": N }
+    """
+    col      = get_collection()
+    sessions = get_sessions_collection()
+    if col is None:
+        return jsonify({"connected": False, "count": 0, "sessions": 0})
+    try:
+        count    = col.count_documents({})
+        sess_cnt = sessions.count_documents({}) if sessions is not None else 0
+        return jsonify({"connected": True, "count": count, "sessions": sess_cnt})
+    except Exception as e:
+        return jsonify({"connected": False, "error": str(e), "count": 0, "sessions": 0})
+
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "model_loaded": booster is not None})
+    mongo_ok = mongo_client is not None
+    return jsonify({"status": "ok", "model_loaded": booster is not None, "mongo": mongo_ok})
 
 
 # ── Startup ───────────────────────────────────────────────────
 if __name__ == "__main__":
     load_model()
+    connect_mongo()
     port = int(os.environ.get("CHURNIQ_PORT", 5000))
     print(f"[ChurnIQ] API running on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
