@@ -250,7 +250,7 @@ async function updateSurvivalChart() {
     distinct_called_numbers: r.distinctNums,
     age_group: r.ageGroup,
     tariff_plan: r.tariffPlan,
-    seconds_of_use: r.secondsUse
+    minutes_of_use: r.secondsUse / 60
   }));
 
   let values = [];
@@ -317,4 +317,4 @@ async function updateSurvivalChart() {
       }
     }
   });
-}
+}

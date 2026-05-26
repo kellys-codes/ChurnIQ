@@ -1,4 +1,3 @@
-
 // ── PREDICTION VIA BACKEND API ───────────────────────────────────
 async function computeChurnPrediction(d) {
   const tariffPlan = (d.tariff === 'contract' || d.tariff === '2') ? 2 : 1;
@@ -16,7 +15,7 @@ async function computeChurnPrediction(d) {
         distinct_called_numbers: d.distinct,
         age_group: d.ageGroup,
         tariff_plan: tariffPlan,
-        seconds_of_use: d.minutesOfUse * 60
+        minutes_of_use: d.minutesOfUse
       }
     })
   });
@@ -47,13 +46,12 @@ async function runPrediction() {
     failures: parseFloat(document.getElementById('f-failures').value) || 0,
     complains: parseInt(document.getElementById('f-complains').value) || 0,
     charge: parseFloat(document.getElementById('f-charge').value) || 0,
-    minutesOfUse: (parseFloat(document.getElementById('f-seconds').value) || 0) / 60,
+    minutesOfUse: (parseFloat(document.getElementById('f-minutes').value) || 0),
     freq: parseFloat(document.getElementById('f-freq').value) || 0,
     sms: parseFloat(document.getElementById('f-sms').value) || 0,
     distinct: parseFloat(document.getElementById('f-distinct').value) || 0,
     ageGroup: parseInt(document.getElementById('f-age').value) || 3,
-    tariff: document.getElementById('f-tariff').value,
-    custValue: parseFloat(document.getElementById('f-value').value) || 0
+    tariff: document.getElementById('f-tariff').value
   };
 
   const btn = document.getElementById('predict-btn');

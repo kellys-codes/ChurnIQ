@@ -29,6 +29,9 @@ function renderSegments(csvData) {
   const highRiskChurnRate = highRisk.length > 0
     ? ((highRisk.filter(r => r.churn === 1).length / highRisk.length) * 100).toFixed(1) : 0;
   const highRiskRevAtRisk = highRisk.filter(r => r.churn === 0).reduce((s, r) => s + r.custValue, 0);
+  const highRiskTag = parseFloat(highRiskChurnRate) >= 30
+    ? '<span class="seg-tag urgent">Urgent Action Required</span>'
+    : '<span class="seg-tag">Action Required</span>';
 
   // Low Engagement
   const lowEngage = csvData.filter(r => r.riskLevel === 'medium' && r.freqUse < 20 && !highRisk.includes(r));
@@ -81,7 +84,7 @@ function renderSegments(csvData) {
         </div>
       </div>
       <div class="seg-desc">Customers with high call failures or active complaints. These customers require immediate attention before further disengagement.</div>
-      <span class="seg-tag urgent">Urgent Action Required</span>
+      ${highRiskTag}
     </div>
 
     <div class="segment-card" style="border-top:3px solid #8b5cf6">

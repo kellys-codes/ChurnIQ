@@ -84,7 +84,7 @@ def compute_risk_score(features: dict) -> int:
     Features dict keys:
       call_failure, complains, charge_amount, frequency_of_use,
       frequency_of_sms, distinct_called_numbers, age_group,
-      tariff_plan, seconds_of_use
+      tariff_plan, minutes_of_use
     """
     call_failure = float(features.get("call_failure", 0))
     complains = float(features.get("complains", 0))
@@ -94,8 +94,7 @@ def compute_risk_score(features: dict) -> int:
     distinct = float(features.get("distinct_called_numbers", 0))
     age_group = float(features.get("age_group", 1))
     tariff_plan = float(features.get("tariff_plan", 1))
-    seconds_of_use = float(features.get("seconds_of_use", 0))
-    minutes_of_use = seconds_of_use / 60.0
+    minutes_of_use = float(features.get("minutes_of_use", 0))
 
     row = np.array(
         [[call_failure, complains, charge_amount, freq_use, freq_sms,
@@ -104,12 +103,12 @@ def compute_risk_score(features: dict) -> int:
     )
     dmat = xgb.DMatrix(row)
 
-    # XGBoost survival:aft returns log(predicted survival time)
-    log_time = float(booster.predict(dmat)[0])
+    # XGBoost survival:aft predict() returns T (predicted months), not log(T)
+    predicted_time = max(float(booster.predict(dmat)[0]), 1e-9)
 
     # AFT CDF — probability of churn within 36 months
     sigma = 1.0  # default distribution scale
-    z = (math.log(36) - log_time) / sigma
+    z = (math.log(36) - math.log(predicted_time)) / sigma
     risk = 0.5 * (1.0 + _erf(z / math.sqrt(2)))
 
     # Calibration multipliers (match predict.js behaviour)
@@ -177,28 +176,30 @@ def predict_survival():
                 float(r.get("distinct_called_numbers", 0)),
                 float(r.get("age_group", 1)),
                 float(r.get("tariff_plan", 1)),
-                float(r.get("seconds_of_use", 0)) / 60.0
+                float(r.get("minutes_of_use", 0))
             ])
             
         row_arr = np.array(features_list, dtype=np.float32)
         dmat = xgb.DMatrix(row_arr)
-        log_times = booster.predict(dmat)
-        
+        # predict() returns T (predicted months), not log(T)
+        predicted_times = np.maximum(booster.predict(dmat), 1e-9)
+        log_predicted = np.log(predicted_times)
+
         resolved = os.path.abspath(MODEL_PATH)
         with open(resolved, "r") as f:
             meta = json.load(f)
         sigma_str = meta.get("learner", {}).get("learner_model_param", {}).get("aft_loss_distribution_scale", "1.0")
         sigma = float(sigma_str)
-        
+
         curve = []
         for month in range(49):
             if month == 0:
                 curve.append(100.0)
                 continue
-            z = (math.log(month) - log_times) / sigma
+            z = (math.log(month) - log_predicted) / sigma
             churn_prob = 0.5 * (1.0 + _vectorized_erf(z / math.sqrt(2)))
             surv = 1.0 - churn_prob
-            
+
             # fix edges
             surv = np.where(z < -5, 1.0, surv)
             surv = np.where(z > 5, 0.0, surv)
