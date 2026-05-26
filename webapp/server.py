@@ -218,9 +218,8 @@ def health():
     return jsonify({"status": "ok", "model_loaded": booster is not None})
 
 
-load_model()  # ← add this at module level (outside __main__)
+load_model()  
 
 if __name__ == "__main__":
     port = int(os.environ.get("CHURNIQ_PORT", 5000))
-    print(f"[ChurnIQ] API running on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
