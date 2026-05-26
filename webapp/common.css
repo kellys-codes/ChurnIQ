@@ -309,32 +309,6 @@ body {
   color: white;
 }
 
-/* Tooltip bubble */
-.info-icon::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--navy);
-  color: white;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.5;
-  padding: 7px 11px;
-  border-radius: 7px;
-  white-space: nowrap;
-  max-width: 220px;
-  white-space: normal;
-  text-align: center;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.18s, transform 0.18s;
-  transform: translateX(-50%) translateY(4px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-  z-index: 9999;
-  font-family: 'DM Sans', sans-serif;
-}
 
 /* Tooltip arrow */
 .info-icon::before {

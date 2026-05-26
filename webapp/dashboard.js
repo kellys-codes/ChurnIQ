@@ -184,11 +184,24 @@ function updateChargeAmountChart() {
     return parseFloat(((churned / inGroup.length) * 100).toFixed(1));
   });
 
+  const label = [
+    '$0.01 - $5',    
+    '$6 - $10',     
+    '$11 - $25',   
+    '$26 - $40',  
+    '$41 - $60',    
+    '$61 - $80',     
+    '$81 - $100',    
+    '$101 - $130',   
+    '$131 - $160',   
+    '> $160'
+  ]
+
   if (chargeAmountChart) chargeAmountChart.destroy();
   chargeAmountChart = new Chart(document.getElementById('chargeAmountChart'), {
     type: 'bar',
     data: {
-      labels: groups.map(g => 'Tier ' + g),
+      labels: label,
       datasets: [{ label: 'Churn Rate %', data: rates, backgroundColor: rates.map(r => r > 20 ? 'rgba(239,68,68,0.7)' : 'rgba(59,130,246,0.7)'), borderRadius: 4 }]
     },
     options: {
@@ -318,3 +331,50 @@ async function updateSurvivalChart() {
     }
   });
 }
+
+// ─── TOOLTIP ───
+document.addEventListener('DOMContentLoaded', () => {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'kpi-tooltip';
+  Object.assign(tooltip.style, {
+    position: 'fixed',
+    background: '#1e293b',
+    color: '#fff',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    lineHeight: '1.6',
+    width: '200px',
+    whiteSpace: 'normal',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    zIndex: '99999',
+    pointerEvents: 'none',
+    opacity: '0',
+    transition: 'opacity 0.15s',
+    fontFamily: 'DM Sans, sans-serif',
+  });
+  document.body.appendChild(tooltip);
+
+  document.querySelectorAll('.info-icon[data-tooltip]').forEach(icon => {
+    icon.addEventListener('mouseenter', (e) => {
+      const rect = icon.getBoundingClientRect();
+      tooltip.textContent = icon.dataset.tooltip;
+      tooltip.style.opacity = '1';
+
+      // Position below icon, centered
+      let left = rect.left + rect.width / 2 - 100;
+      let top  = rect.bottom + 8;
+
+      // Keep within viewport
+      if (left < 8) left = 8;
+      if (left + 200 > window.innerWidth - 8) left = window.innerWidth - 208;
+
+      tooltip.style.left = left + 'px';
+      tooltip.style.top  = top  + 'px';
+    });
+
+    icon.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+  });
+});
