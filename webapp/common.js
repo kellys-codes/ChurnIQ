@@ -51,7 +51,7 @@ async function saveToMongo(customers, filename = 'import.csv') {
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error || `MongoDB save error ${resp.status}`);
+    throw new Error(err.error || `Database save error ${resp.status}`);
   }
   return resp.json(); // { ok, inserted, session_id }
 }
@@ -62,7 +62,7 @@ async function saveToMongo(customers, filename = 'import.csv') {
  */
 async function loadFromMongo() {
   const resp = await fetch(`${API_BASE_URL}/data/load`);
-  if (!resp.ok) throw new Error(`MongoDB load error ${resp.status}`);
+  if (!resp.ok) throw new Error(`Database load error ${resp.status}`);
   const { customers } = await resp.json();
   return customers || [];
 }
@@ -74,7 +74,7 @@ async function deleteFromMongo() {
   const resp = await fetch(`${API_BASE_URL}/data/delete`, { method: 'DELETE' });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error || `MongoDB delete error ${resp.status}`);
+    throw new Error(err.error || `Database delete error ${resp.status}`);
   }
   return resp.json(); // { ok, deleted }
 }
@@ -301,11 +301,11 @@ function processFile(file) {
         `Saving ${csvData.length.toLocaleString()} customers to databse…`;
       try {
         const saveResult = await saveToMongo(csvData, file.name);
-        console.log(`[ChurnIQ] MongoDB save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
+        console.log(`[ChurnIQ] Database save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
       } catch (mongoErr) {
         // Non-fatal: warn but continue with localStorage fallback
-        console.warn('[ChurnIQ] MongoDB save failed (using localStorage fallback):', mongoErr.message);
-        showToast('⚠ MongoDB unavailable — data saved locally only', 'error');
+        console.warn('[ChurnIQ] Database save failed (using localStorage fallback):', mongoErr.message);
+        showToast('⚠ Database unavailable — data saved locally only', 'error');
       }
 
       // Always save to localStorage as cache
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const status = await getMongoStatus();
     if (status.connected && status.count > 0) {
       document.getElementById('loading-text') &&
-        (document.getElementById('loading-text').textContent = 'Loading data from MongoDB…');
+        (document.getElementById('loading-text').textContent = 'Loading data from database…');
       const mongoData = await loadFromMongo();
       if (mongoData.length > 0) {
         csvData = mongoData;
@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   } catch (e) {
-    console.warn('[ChurnIQ] Could not reach MongoDB on init, falling back to localStorage:', e.message);
+    console.warn('[ChurnIQ] Could not reach database on init, falling back to localStorage:', e.message);
   }
 
   if (!loaded) {
