@@ -8,7 +8,8 @@ const ACTIONED_KEY = 'churniq_actioned';
 let csvData = [];
 
 // ── API CONFIGURATION ────────────────────────────────────────────
-const API_BASE_URL = 'http://localhost:5000';
+const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : '';
 
 // ── DATA PERSISTENCE ─────────────────────────────────────────────
 function loadCSVData() {
