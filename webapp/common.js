@@ -298,7 +298,7 @@ function processFile(file) {
 
       // Save to MongoDB
       document.getElementById('loading-text').textContent =
-        `Saving ${csvData.length.toLocaleString()} customers to databse…`;
+        `Saving ${csvData.length.toLocaleString()} customers to database…`;
       try {
         const saveResult = await saveToMongo(csvData, file.name);
         console.log(`[ChurnIQ] Database save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
