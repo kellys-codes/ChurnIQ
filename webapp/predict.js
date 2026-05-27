@@ -41,7 +41,7 @@ async function computeChurnPrediction(d) {
 
 // ── UI CONTROLLER ────────────────────────────────────────────────
 async function runPrediction() {
-  const id = document.getElementById('f-id').value || 'CUST-NEW';
+  const id = 'PREDICTED CUST';
   const data = {
     failures: parseFloat(document.getElementById('f-failures').value) || 0,
     complains: parseInt(document.getElementById('f-complains').value) || 0,
