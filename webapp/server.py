@@ -329,5 +329,4 @@ connect_mongo()
 
 if __name__ == "__main__":
     port = int(os.environ.get("CHURNIQ_PORT", 5000))
-    print(f"[ChurnIQ] API running on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
