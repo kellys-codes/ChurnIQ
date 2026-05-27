@@ -299,20 +299,28 @@ function processFile(file) {
       // Save to MongoDB
       document.getElementById('loading-text').textContent =
         `Saving ${csvData.length.toLocaleString()} customers to database…`;
+      let mongoFailed = false;
       try {
         const saveResult = await saveToMongo(csvData, file.name);
         console.log(`[ChurnIQ] Database save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
       } catch (mongoErr) {
         // Non-fatal: warn but continue with localStorage fallback
+        mongoFailed = true;
         console.warn('[ChurnIQ] Database save failed (using localStorage fallback):', mongoErr.message);
-        showToast('⚠ Database unavailable — data saved locally only', 'error');
       }
 
       // Always save to localStorage as cache
       saveCSVData(csvData);
 
       document.getElementById('loading-overlay').classList.add('hidden');
-      showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
+
+      if (mongoFailed) {
+        // Show warning first, then success toast after warning clears (3.5s)
+        showToast('⚠ Database unavailable — data saved locally only', 'error');
+        setTimeout(() => showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`), 4000);
+      } else {
+        showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
+      }
       updateDataStatus(csvData.length);
       if (typeof onDataLoaded === 'function') onDataLoaded(csvData);
     } catch (err) {
@@ -344,13 +352,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const status = await getMongoStatus();
     if (status.connected && status.count > 0) {
-      document.getElementById('loading-text') &&
-        (document.getElementById('loading-text').textContent = 'Loading data from database…');
-      const mongoData = await loadFromMongo();
-      if (mongoData.length > 0) {
-        csvData = mongoData;
-        saveCSVData(csvData); // refresh local cache
-        loaded = true;
+      const loadingOverlay = document.getElementById('loading-overlay');
+      const loadingText    = document.getElementById('loading-text');
+      if (loadingOverlay && loadingText) {
+        loadingText.textContent = 'Loading data from database…';
+        loadingOverlay.classList.remove('hidden');
+      }
+      try {
+        const mongoData = await loadFromMongo();
+        if (mongoData.length > 0) {
+          csvData = mongoData;
+          saveCSVData(csvData); // refresh local cache
+          loaded = true;
+        }
+      } finally {
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
       }
     }
   } catch (e) {
