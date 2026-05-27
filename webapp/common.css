@@ -151,6 +151,20 @@ body {
 }
 .btn-import:hover { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
 
+.btn-delete-data {
+  display: flex; align-items: center; gap: 7px;
+  border: 1.5px solid #fecaca; background: #fef2f2; color: #b91c1c;
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-delete-data:hover {
+  border-color: var(--accent-red);
+  background: #fee2e2;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+}
+
 .btn-primary {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--accent-blue); color: white;
@@ -195,6 +209,63 @@ body {
 .drop-icon { font-size: 40px; margin-bottom: 10px; color: var(--text-light); }
 .drop-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
+/* ─── DELETE CONFIRM MODAL ────────────────────────────────────── */
+.delete-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 700;
+  align-items: center; justify-content: center;
+}
+.delete-modal-overlay.open { display: flex; }
+.delete-modal {
+  background: white; border-radius: var(--radius);
+  width: 420px; max-width: 95vw; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  animation: modalIn 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.delete-modal-header {
+  background: #7f1d1d; padding: 16px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.delete-modal-header h3 { color: white; font-size: 15px; font-weight: 600; }
+.delete-modal-body { padding: 24px; }
+.delete-modal-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: #fef2f2; border: 2px solid #fecaca;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; color: var(--accent-red);
+}
+.delete-modal-body p {
+  font-size: 14px; color: var(--text-muted); text-align: center;
+  line-height: 1.6; margin-bottom: 6px;
+}
+.delete-modal-body strong { color: var(--text); }
+.delete-modal-warning {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+  padding: 10px 14px; font-size: 12px; color: #78350f;
+  margin-top: 14px; display: flex; gap: 8px; align-items: flex-start;
+}
+.delete-modal-footer {
+  padding: 14px 20px; border-top: 1px solid var(--border);
+  display: flex; gap: 10px; justify-content: flex-end; background: #f8f9fb;
+}
+.btn-modal-cancel-del {
+  padding: 9px 18px; border: 1.5px solid var(--border); background: white;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s;
+}
+.btn-modal-cancel-del:hover { border-color: var(--text-muted); }
+.btn-modal-confirm-del {
+  padding: 9px 20px; background: var(--accent-red); color: white; border: none;
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-modal-confirm-del:hover { background: #dc2626; }
+
 /* ─── LOADING OVERLAY ─────────────────────────────────────────── */
 .loading-overlay {
   position: fixed; inset: 0; background: rgba(255,255,255,0.85);
@@ -223,12 +294,41 @@ body {
 .toast.success  { background: #065f46; }
 .toast.error    { background: #7f1d1d; }
 
-/* ─── INFO ICON ───────────────────────────────────────────────── */
+/* ─── INFO ICON & TOOLTIP ─────────────────────────────────────── */
 .info-icon {
-  width: 14px; height: 14px; border-radius: 50%;
+  width: 16px; height: 16px; border-radius: 50%;
   background: var(--border); color: var(--text-muted);
-  font-size: 9px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
   cursor: help; flex-shrink: 0;
+  position: relative;
+  transition: background 0.15s, color 0.15s;
+}
+.info-icon:hover {
+  background: var(--accent-blue);
+  color: white;
+}
+
+
+/* Tooltip arrow */
+.info-icon::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  border: 5px solid transparent;
+  border-top-color: var(--navy);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s, transform 0.18s;
+  z-index: 9999;
+}
+
+.info-icon:hover::after,
+.info-icon:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ─── SPINNER ─────────────────────────────────────────────────── */
