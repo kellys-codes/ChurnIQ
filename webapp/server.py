@@ -223,3 +223,9 @@ load_model()
 if __name__ == "__main__":
     port = int(os.environ.get("CHURNIQ_PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+from pymongo import MongoClient
+
+client = MongoClient(os.environ["MONGODB_URI"])
+db = client[os.environ.get("MONGODB_DB_NAME", "churn_db")]
