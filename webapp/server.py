@@ -19,7 +19,7 @@ CORS(app)
 # ── Model Loading ─────────────────────────────────────────────
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "model.json"),
+    os.path.join(os.path.dirname(__file__), "model.json"),  # fixed: was "../model.json", wrong for HuggingFace
 )
 
 booster = None
@@ -38,10 +38,9 @@ FEATURE_NAMES = [
 ]
 
 # ── MongoDB Setup ─────────────────────────────────────────────
-# Set MONGODB_URI environment variable, e.g.:
-#   export MONGODB_URI="mongodb://localhost:27017"
-# or for MongoDB Atlas:
-#   export MONGODB_URI="mongodb+srv://<user>:<pass>@cluster.mongodb.net"
+# Set MONGODB_URI as a HuggingFace Space secret, e.g.:
+#   MONGODB_URI = "mongodb+srv://<user>:<pass>@cluster.mongodb.net"
+# Locally, set it in your .env file or export it in your shell.
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB  = os.environ.get("MONGODB_DB", "churniq")
 
@@ -54,7 +53,6 @@ def connect_mongo():
     global mongo_client, db
     try:
         mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-        # Ping to verify connection
         mongo_client.admin.command("ping")
         db = mongo_client[MONGODB_DB]
         print(f"[ChurnIQ] MongoDB connected → {MONGODB_URI} / db={MONGODB_DB}")
@@ -66,14 +64,12 @@ def connect_mongo():
 
 
 def get_collection():
-    """Return the customers collection, or None if not connected."""
     if db is None:
         return None
     return db["customers"]
 
 
 def get_sessions_collection():
-    """Return the sessions collection for tracking import batches."""
     if db is None:
         return None
     return db["sessions"]
@@ -120,14 +116,14 @@ def _vectorized_erf(x: np.ndarray) -> np.ndarray:
 
 
 def compute_risk_score(features: dict) -> int:
-    call_failure  = float(features.get("call_failure", 0))
-    complains     = float(features.get("complains", 0))
-    charge_amount = float(features.get("charge_amount", 0))
-    freq_use      = float(features.get("frequency_of_use", 0))
-    freq_sms      = float(features.get("frequency_of_sms", 0))
-    distinct      = float(features.get("distinct_called_numbers", 0))
-    age_group     = float(features.get("age_group", 1))
-    tariff_plan   = float(features.get("tariff_plan", 1))
+    call_failure   = float(features.get("call_failure", 0))
+    complains      = float(features.get("complains", 0))
+    charge_amount  = float(features.get("charge_amount", 0))
+    freq_use       = float(features.get("frequency_of_use", 0))
+    freq_sms       = float(features.get("frequency_of_sms", 0))
+    distinct       = float(features.get("distinct_called_numbers", 0))
+    age_group      = float(features.get("age_group", 1))
+    tariff_plan    = float(features.get("tariff_plan", 1))
     minutes_of_use = float(features.get("minutes_of_use", 0))
 
     row = np.array(
@@ -237,16 +233,15 @@ def predict_survival():
 @app.route("/data/save", methods=["POST"])
 def data_save():
     """
-    Save (upsert) a batch of customer records to MongoDB.
+    Save a batch of customer records to MongoDB.
     Body: { "customers": [ {...}, ... ], "filename": "my.csv" }
-    Each customer doc should already have riskScore, riskLevel, etc.
-    The endpoint APPENDS to existing data (does not replace).
+    Appends to existing data (does not replace).
     """
     col = get_collection()
     if col is None:
         return jsonify({"error": "MongoDB not connected"}), 503
 
-    body = request.get_json(force=True)
+    body      = request.get_json(force=True)
     customers = body.get("customers", [])
     filename  = body.get("filename", "unknown.csv")
 
@@ -254,7 +249,6 @@ def data_save():
         return jsonify({"error": "No customers provided"}), 400
 
     try:
-        # Create a session record
         sessions = get_sessions_collection()
         session_doc = {
             "filename": filename,
@@ -264,38 +258,27 @@ def data_save():
         session_result = sessions.insert_one(session_doc)
         session_id = str(session_result.inserted_id)
 
-        # Attach session_id to each customer and insert
         for c in customers:
-            c["session_id"] = session_id
-            c["imported_at"] = session_doc["imported_at"]
-            # Remove _id if present to avoid conflicts
-            c.pop("_id", None)
+            c["session_id"]   = session_id
+            c["imported_at"]  = session_doc["imported_at"]
+            c.pop("_id", None)  # avoid ObjectId conflicts on re-import
 
-        result = col.insert_many(customers)
+        result   = col.insert_many(customers)
         inserted = len(result.inserted_ids)
 
-        return jsonify({
-            "ok": True,
-            "inserted": inserted,
-            "session_id": session_id
-        })
+        return jsonify({"ok": True, "inserted": inserted, "session_id": session_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/data/load", methods=["GET"])
 def data_load():
-    """
-    Load all customer records from MongoDB.
-    Returns: { "customers": [...], "count": N }
-    _id fields are stringified for JSON compatibility.
-    """
+    """Load all customer records from MongoDB."""
     col = get_collection()
     if col is None:
         return jsonify({"error": "MongoDB not connected"}), 503
-
     try:
-        docs = list(col.find({}, {"_id": 0}))  # exclude _id from response
+        docs = list(col.find({}, {"_id": 0}))
         return jsonify({"customers": docs, "count": len(docs)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -303,18 +286,15 @@ def data_load():
 
 @app.route("/data/delete", methods=["DELETE"])
 def data_delete():
-    """
-    Delete ALL customer records and sessions from MongoDB.
-    Returns: { "ok": true, "deleted": N }
-    """
+    """Delete ALL customer records and sessions from MongoDB."""
     col      = get_collection()
     sessions = get_sessions_collection()
     if col is None:
         return jsonify({"error": "MongoDB not connected"}), 503
-
     try:
-        result   = col.delete_many({})
-        sessions.delete_many({})
+        result = col.delete_many({})
+        if sessions is not None:
+            sessions.delete_many({})
         return jsonify({"ok": True, "deleted": result.deleted_count})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -322,10 +302,7 @@ def data_delete():
 
 @app.route("/data/status", methods=["GET"])
 def data_status():
-    """
-    Quick health check — returns how many records are in MongoDB.
-    Returns: { "connected": bool, "count": N, "sessions": N }
-    """
+    """Quick health check — returns record count in MongoDB."""
     col      = get_collection()
     sessions = get_sessions_collection()
     if col is None:
@@ -345,9 +322,12 @@ def health():
 
 
 # ── Startup ───────────────────────────────────────────────────
+# Called at module level so Gunicorn / HuggingFace WSGI initialises correctly.
+# (Inside __main__ only would be skipped by Gunicorn.)
+load_model()
+connect_mongo()
+
 if __name__ == "__main__":
-    load_model()
-    connect_mongo()
     port = int(os.environ.get("CHURNIQ_PORT", 5000))
     print(f"[ChurnIQ] API running on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
