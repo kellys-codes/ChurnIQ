@@ -347,11 +347,23 @@ function updateDataStatus(count) {
 
 // ── INIT ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  // Try to load from MongoDB first; fall back to localStorage cache
   let loaded = false;
   try {
     const status = await getMongoStatus();
-    if (status.connected && status.count > 0) {
+
+    if (!status.connected) {
+      // MongoDB tidak tersedia, pakai localStorage
+      csvData = loadCSVData();
+      loaded = true;
+    } else if (status.count === 0) {
+      // MongoDB kosong (mungkin di-delete dari device lain)
+      // Paksa clear localStorage supaya sinkron
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ACTIONED_KEY);
+      csvData = [];
+      loaded = true;
+    } else {
+      // MongoDB ada data, load dari sana
       const loadingOverlay = document.getElementById('loading-overlay');
       const loadingText    = document.getElementById('loading-text');
       if (loadingOverlay && loadingText) {
@@ -362,7 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const mongoData = await loadFromMongo();
         if (mongoData.length > 0) {
           csvData = mongoData;
-          saveCSVData(csvData); // refresh local cache
+          saveCSVData(csvData);
           loaded = true;
         }
       } finally {
@@ -373,15 +385,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('[ChurnIQ] Could not reach database on init, falling back to localStorage:', e.message);
   }
 
-  if (!loaded) {
-    csvData = loadCSVData();
-  }
+  if (!loaded) csvData = loadCSVData();
 
   updateDataStatus(csvData.length);
 
-  if (csvData.length > 0 && typeof onDataLoaded === 'function') {
-    onDataLoaded(csvData);
-  } else if (csvData.length === 0 && typeof onNoData === 'function') {
-    onNoData();
-  }
+  if (csvData.length > 0 && typeof onDataLoaded === 'function') onDataLoaded(csvData);
+  else if (csvData.length === 0 && typeof onNoData === 'function') onNoData();
 });
