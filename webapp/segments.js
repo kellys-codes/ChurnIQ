@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════════
-// segments.js  —  ChurnIQ  |  Customer Segments page
-// ═══════════════════════════════════════════════════════════════
-
-// Called by shared.js after a new CSV is imported
 function onDataLoaded(csvData) {
   renderSegments(csvData);
 }
@@ -17,14 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── RENDER SEGMENTS ──────────────────────────────────────────────
+// render seg
 function renderSegments(csvData) {
   document.getElementById('segments-empty').style.display = 'none';
   document.getElementById('segments-grid').style.display  = '';
 
-  // ── Segment calculations ──────────────────────────────────────
-
-  // High-Risk Churners
+  // calculations
+  // high risk churn
   const highRisk = csvData.filter(r => r.riskLevel === 'high');
   const highRiskChurnRate = highRisk.length > 0
     ? ((highRisk.filter(r => r.churn === 1).length / highRisk.length) * 100).toFixed(1) : 0;
@@ -33,36 +27,36 @@ function renderSegments(csvData) {
     ? '<span class="seg-tag urgent">Urgent Action Required</span>'
     : '<span class="seg-tag">Action Required</span>';
 
-  // Low Engagement
+  // low engagement
   const lowEngage = csvData.filter(r => r.riskLevel === 'medium' && r.freqUse < 20 && !highRisk.includes(r));
   const lowEngageChurnRate = lowEngage.length > 0
     ? ((lowEngage.filter(r => r.churn === 1).length / lowEngage.length) * 100).toFixed(1) : 0;
   const lowEngageRevAtRisk = lowEngage.filter(r => r.churn === 0).reduce((s, r) => s + r.custValue, 0);
 
-  // Pay-as-go Switchers
+  // payg switch
   const paygSwitchers = csvData.filter(r => r.tariffPlan === 1 && r.status === 1 && r.freqUse >= 20 && r.churn === 0);
   const paygUpsellOpp = paygSwitchers.reduce((s, r) => s + r.custValue, 0) * 0.15;
 
-  // Loyal Base
+  // loyal
   const loyal = csvData.filter(r => r.riskLevel === 'low' && r.subLength > 30 && r.status === 1 && r.churn === 0);
   const loyalChurnRate = loyal.length > 0
     ? ((csvData.filter(r => r.churn === 1 && r.subLength > 30 && r.complains === 0).length / loyal.length) * 100).toFixed(1) : 0;
   const avgLoyalValue = loyal.length > 0
     ? loyal.reduce((s, r) => s + r.custValue, 0) / loyal.length : 0;
 
-  // New Subscribers
+  // new subs
   const newSubs = csvData.filter(r => r.subLength <= 6);
   const newSubsEarlyChurn = newSubs.length > 0
     ? ((newSubs.filter(r => r.churn === 1).length / newSubs.length) * 100).toFixed(1) : 0;
 
-  // Silent Churners
+  // silent churn
   const silentChurners = csvData.filter(r => r.churn === 1 && r.complains === 0);
   const allChurned = csvData.filter(r => r.churn === 1);
   const silentChurnRate = allChurned.length > 0
     ? ((silentChurners.length / allChurned.length) * 100).toFixed(1) : 0;
   const silentRevAtRisk = silentChurners.reduce((s, r) => s + r.custValue, 0);
 
-  // ── Render cards ──────────────────────────────────────────────
+  // render cards
   document.getElementById('segments-grid').innerHTML = `
 
     <div class="segment-card red">
@@ -196,6 +190,5 @@ function renderSegments(csvData) {
       <div class="seg-desc">Customers in the early months of their subscription. The onboarding experience during this period plays a key role in determining long-term retention.</div>
       <span class="seg-tag">Onboarding Review</span>
     </div>
-
   `;
 }

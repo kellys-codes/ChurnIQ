@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChurnIQ — Dashboard</title>
+<title>Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <link rel="stylesheet" href="dashboard.css">
@@ -11,16 +11,13 @@
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="loading-overlay hidden" id="loading-overlay">
   <div class="loading-spinner-big"></div>
   <div class="loading-text" id="loading-text">Processing…</div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo-wrap">
     <div class="sidebar-logo">CI</div>
@@ -51,7 +48,6 @@
   </a>
 </nav>
 
-<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <h1>Dashboard</h1>
@@ -73,7 +69,7 @@
 
   <div class="content">
 
-    <!-- EMPTY STATE -->
+    <!-- empty -->
     <div id="dashboard-empty" class="empty-state" style="display:none">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <h3>No data loaded yet</h3>
@@ -84,7 +80,7 @@
       </button>
     </div>
 
-    <!-- DASHBOARD CONTENT -->
+    <!-- dashboard -->
     <div id="dashboard-content" style="display:none">
       <!-- KPI Cards -->
       <div class="kpi-grid">
@@ -122,7 +118,7 @@
         </div>
       </div>
 
-      <!-- Row 1: Risk Drivers + Donut -->
+      <!-- risk driver n donut chart -->
       <div class="widget-row">
         <div class="widget-card">
           <div class="widget-title">Top Churn Risk Drivers</div>
@@ -162,7 +158,7 @@
         </div>
       </div>
 
-      <!-- Subscription Length -->
+      <!-- subs length -->
       <div class="widget-card" style="margin-bottom:20px">
         <div class="widget-title">Churn by Subscription Length</div>
         <div class="widget-subtitle">Number of churned customers per subscription length bucket</div>
@@ -171,7 +167,7 @@
         </div>
       </div>
 
-      <!-- Age Group -->
+      <!-- age group -->
       <div class="widget-card" style="margin-bottom:20px">
         <div class="widget-title">Churn Rate by Age Group</div>
         <div class="widget-subtitle">Churn percentage across age categories (1=youngest, 5=oldest)</div>
@@ -180,7 +176,7 @@
         </div>
       </div>
 
-      <!-- Charge Amount -->
+      <!-- charge amount -->
       <div class="widget-card" style="margin-bottom:20px">
         <div class="widget-title">Churn Rate by Charge Amount</div>
         <div class="widget-subtitle">Customers on lower charge tiers show a higher tendency to churn</div>
@@ -189,7 +185,7 @@
         </div>
       </div>
 
-      <!-- Distinct Numbers -->
+      <!-- distinct numbers -->
       <div class="widget-card" style="margin-bottom:20px">
         <div class="widget-title">Churn Rate by Distinct Called Numbers</div>
         <div class="widget-subtitle">Customers with very few unique contacts tend to have a higher likelihood of churning</div>
@@ -198,7 +194,7 @@
         </div>
       </div>
 
-      <!-- Survival Curve -->
+      <!-- survival curve -->
       <div class="widget-card">
         <div class="widget-title">Monthly Survival Probability</div>
         <div class="widget-subtitle">Probability a customer remains active over time based on historical subscription data</div>
@@ -211,7 +207,7 @@
   </div>
 </div>
 
-<!-- IMPORT MODAL -->
+<!-- import modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
   <div class="modal">
     <div class="modal-header">
@@ -235,7 +231,7 @@
   </div>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- delete modal -->
 <div class="delete-modal-overlay" id="delete-modal-overlay" onclick="closeDeleteModalIfOutside(event)">
   <div class="delete-modal">
     <div class="delete-modal-header">

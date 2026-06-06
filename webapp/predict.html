@@ -3,23 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChurnIQ — Predict Customer</title>
+<title>Predict Customer</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <link rel="stylesheet" href="predict.css">
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="loading-overlay hidden" id="loading-overlay">
   <div class="loading-spinner-big"></div>
   <div class="loading-text" id="loading-text">Processing…</div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo-wrap">
     <div class="sidebar-logo">CI</div>
@@ -50,7 +47,6 @@
   </a>
 </nav>
 
-<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <h1>Predict Customer</h1>
@@ -161,7 +157,7 @@
           <div class="spinner" id="btn-spinner"></div>
         </button>
 
-        <!-- RESULT PANEL -->
+        <!-- results -->
         <div class="result-panel" id="result-panel">
           <div class="result-header" id="result-header">
             <div style="flex:1">
@@ -197,7 +193,7 @@
   </div>
 </div>
 
-<!-- IMPORT MODAL -->
+<!-- import modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
   <div class="modal">
     <div class="modal-header">
@@ -224,7 +220,7 @@
 <script src="common.js"></script>
 <script src="predict.js"></script>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- delete modal -->
 <div class="delete-modal-overlay" id="delete-modal-overlay" onclick="closeDeleteModalIfOutside(event)">
   <div class="delete-modal">
     <div class="delete-modal-header">

@@ -1,4 +1,4 @@
-/* ─── RESET & TOKENS ─────────────────────────────────────────── */
+/* reset & tokens */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -30,7 +30,6 @@ body {
   overflow: hidden;
 }
 
-/* ─── SIDEBAR ─────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
   background: var(--navy);
@@ -118,7 +117,7 @@ body {
 }
 .sidebar:hover .sidebar-section-label { opacity: 1; }
 
-/* ─── MAIN LAYOUT ─────────────────────────────────────────────── */
+/* main layout */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .topbar {
@@ -140,7 +139,7 @@ body {
 .content::-webkit-scrollbar-track { background: transparent; }
 .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* ─── BUTTONS ─────────────────────────────────────────────────── */
+/* buttons */
 .btn-import {
   display: flex; align-items: center; gap: 7px;
   border: 1.5px solid var(--border); background: white; color: var(--text);
@@ -174,7 +173,7 @@ body {
 }
 .btn-primary:hover { background: #2563eb; }
 
-/* ─── EMPTY STATE ─────────────────────────────────────────────── */
+/* empty */
 .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 80px 20px; gap: 16px; text-align: center;
@@ -183,7 +182,7 @@ body {
 .empty-state h3   { font-size: 17px; font-weight: 600; color: var(--text); }
 .empty-state p    { font-size: 13px; color: var(--text-muted); max-width: 340px; line-height: 1.6; }
 
-/* ─── IMPORT MODAL ────────────────────────────────────────────── */
+/* import modal */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.4); z-index: 500;
@@ -209,7 +208,7 @@ body {
 .drop-icon { font-size: 40px; margin-bottom: 10px; color: var(--text-light); }
 .drop-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
-/* ─── DELETE CONFIRM MODAL ────────────────────────────────────── */
+/* delete modal */
 .delete-modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.45); z-index: 700;
@@ -266,7 +265,7 @@ body {
 }
 .btn-modal-confirm-del:hover { background: #dc2626; }
 
-/* ─── LOADING OVERLAY ─────────────────────────────────────────── */
+/* loading overlay */
 .loading-overlay {
   position: fixed; inset: 0; background: rgba(255,255,255,0.85);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -280,7 +279,7 @@ body {
 }
 .loading-text { font-size: 14px; font-weight: 500; color: var(--text-muted); }
 
-/* ─── TOAST ───────────────────────────────────────────────────── */
+/* toast */
 .toast {
   position: fixed; bottom: 24px; right: 24px;
   background: var(--navy); color: white;
@@ -294,7 +293,7 @@ body {
 .toast.success  { background: #065f46; }
 .toast.error    { background: #7f1d1d; }
 
-/* ─── INFO ICON & TOOLTIP ─────────────────────────────────────── */
+/* info icon n tool tip */
 .info-icon {
   width: 16px; height: 16px; border-radius: 50%;
   background: var(--border); color: var(--text-muted);
@@ -310,7 +309,7 @@ body {
 }
 
 
-/* Tooltip arrow */
+/* tool tip arrow */
 .info-icon::before {
   content: '';
   position: absolute;
@@ -331,7 +330,7 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ─── SPINNER ─────────────────────────────────────────────────── */
+/* spinner */
 .spinner {
   width: 18px; height: 18px;
   border: 2px solid rgba(255,255,255,0.3); border-top-color: white;

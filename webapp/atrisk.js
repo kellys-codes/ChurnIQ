@@ -1,13 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-// at-risk.js  —  ChurnIQ  |  At-Risk Customers page
-// ═══════════════════════════════════════════════════════════════
-
 const PAGE_SIZE = 20;
 let filteredData = [];
 let currentPage  = 1;
 let actionedSet  = loadActionedSet();
 
-// Called by shared.js after a new CSV is imported
+// called by shared.js after a new CSV is imported
 function onDataLoaded(csvData) {
   renderPage(csvData);
 }
@@ -30,7 +26,7 @@ function renderPage(csvData) {
   renderTable();
 }
 
-// ── FILTER ───────────────────────────────────────────────────────
+// filter
 function filterTable() {
   const csvData   = loadCSVData();
   const search    = document.getElementById('table-search').value.toLowerCase();
@@ -51,7 +47,7 @@ function filterTable() {
   renderTable();
 }
 
-// ── TABLE RENDER ─────────────────────────────────────────────────
+// table render
 function renderTable() {
   const tbody  = document.getElementById('at-risk-tbody');
   const barColors = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
@@ -99,7 +95,7 @@ function renderTable() {
   renderPagination();
 }
 
-// ── PAGINATION ───────────────────────────────────────────────────
+// pagination
 function renderPagination() {
   const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
   const pag = document.getElementById('pagination');
@@ -127,7 +123,7 @@ function goPage(p) {
   renderTable();
 }
 
-// ── ACTION MODAL ─────────────────────────────────────────────────
+// action modal
 function openActionModal(r) {
   const badgeBg  = { high: '#fef2f2', medium: '#fffbeb', low: '#f0fdf4' };
   const badgeCol = { high: '#b91c1c', medium: '#92400e', low: '#166534' };

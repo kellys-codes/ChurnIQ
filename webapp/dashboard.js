@@ -5,7 +5,7 @@ let survivalChart = null;
 let chargeAmountChart = null;
 let distinctNumbersChart = null;
 
-// Called by common.js when data is available
+// called by common.js when data is available
 function onDataLoaded() {
   document.getElementById('dashboard-empty').style.display = 'none';
   document.getElementById('dashboard-content').style.display = '';
@@ -19,13 +19,13 @@ function onDataLoaded() {
   updateSurvivalChart();
 }
 
-// Called by common.js when no stored data exists
+// called by common.js when no stored data exists
 function onNoData() {
   document.getElementById('dashboard-empty').style.display = 'flex';
   document.getElementById('dashboard-content').style.display = 'none';
 }
 
-// ─── KPIs ───
+// kpi
 function updateKPIs() {
   const total = csvData.length;
   const churned = csvData.filter(r => r.churn === 1);
@@ -43,7 +43,7 @@ function updateKPIs() {
   document.getElementById('kpi-total-label').textContent = `Across ${total.toLocaleString()} customers`;
 }
 
-// ─── Risk Drivers ───
+// risk drivers
 function updateRiskDrivers() {
   const churned = csvData.filter(r => r.churn === 1);
   const active = csvData.filter(r => r.churn === 0);
@@ -85,7 +85,7 @@ function updateRiskDrivers() {
   document.getElementById('risk-drivers-content').innerHTML = html;
 }
 
-// ─── Donut Chart ───
+// donut chart
 function updateDonut() {
   const churned = csvData.filter(r => r.churn === 1);
   const paygChurned = churned.filter(r => r.tariffPlan === 1).length;
@@ -117,7 +117,7 @@ function updateDonut() {
   });
 }
 
-// ─── Subscription Length Chart ───
+// subs length chart
 function updateSubLengthChart() {
   const churned = csvData.filter(r => r.churn === 1);
   const buckets = {};
@@ -146,7 +146,7 @@ function updateSubLengthChart() {
   });
 }
 
-// ─── Age Group Chart ───
+// age group chart
 function updateAgeGroupChart() {
   const groups = [1, 2, 3, 4, 5];
   const rates = groups.map(g => {
@@ -174,7 +174,7 @@ function updateAgeGroupChart() {
   });
 }
 
-// ─── Charge Amount Chart ───
+// charge amount chart
 function updateChargeAmountChart() {
   const groups = Array.from(new Set(csvData.map(r => r.chargeAmount))).sort((a, b) => a - b);
   const rates = groups.map(g => {
@@ -215,7 +215,7 @@ function updateChargeAmountChart() {
   });
 }
 
-// ─── Distinct Called Numbers Chart ───
+// dist num chart
 function updateDistinctNumbersChart() {
   const buckets = {};
   csvData.forEach(r => {
@@ -248,7 +248,7 @@ function updateDistinctNumbersChart() {
 }
 
 
-// ─── XGBoost AFT Survival Curve ───
+// xgboostAFT survival curve
 
 async function updateSurvivalChart() {
   const n = csvData.length;
@@ -332,7 +332,7 @@ async function updateSurvivalChart() {
   });
 }
 
-// ─── TOOLTIP ───
+// tool tip
 document.addEventListener('DOMContentLoaded', () => {
   const tooltip = document.createElement('div');
   tooltip.id = 'kpi-tooltip';

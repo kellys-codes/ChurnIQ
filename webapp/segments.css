@@ -1,11 +1,9 @@
-/* ─── SEGMENTS GRID ───────────────────────────────────────────── */
 .segments-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* ─── SEGMENT CARD ────────────────────────────────────────────── */
 .segment-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -22,7 +20,7 @@
 .segment-card.green  { border-top: 3px solid var(--accent-green); }
 .segment-card.gray   { border-top: 3px solid #9ca3af; }
 
-/* ─── CARD INTERNALS ──────────────────────────────────────────── */
+
 .seg-header {
   display: flex; justify-content: space-between; align-items: flex-start;
   margin-bottom: 12px;
@@ -47,7 +45,7 @@
   line-height: 1.5; margin-bottom: 10px;
 }
 
-/* ─── SEGMENT TAGS ────────────────────────────────────────────── */
+
 .seg-tag {
   display: inline-block;
   background: #f3f4f6; color: #374151;

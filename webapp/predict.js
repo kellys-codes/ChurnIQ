@@ -1,4 +1,4 @@
-// ── PREDICTION VIA BACKEND API ───────────────────────────────────
+// prediction using backend API
 async function computeChurnPrediction(d) {
   const tariffPlan = (d.tariff === 'contract' || d.tariff === '2') ? 2 : 1;
 
@@ -39,7 +39,7 @@ async function computeChurnPrediction(d) {
   };
 }
 
-// ── UI CONTROLLER ────────────────────────────────────────────────
+// ui control
 async function runPrediction() {
   const id = 'PREDICTED CUST';
   const data = {
@@ -99,25 +99,25 @@ function showResult(id, r) {
   panel.style.display = 'block';
   document.getElementById('result-cust-id').textContent = id;
 
-  // 1. Set the text
+  // set text
   badge.textContent = r.riskLevel;
 
-  // 2. Remove any previous color classes to prevent "color bleeding"
+  // remove any previous color classes to prevent "color bleeding"
   badge.classList.remove('risk-low', 'risk-medium', 'risk-high');
   header.classList.remove('bg-low', 'bg-medium', 'bg-high');
 
-  // 3. Apply new color based on the riskLevel string
+  // apply new color based on the riskLevel string
   const level = r.riskLevel.toLowerCase(); // 'low', 'medium', or 'high'
   badge.classList.add(`risk-${level}`);
   header.classList.add(`bg-${level}`);
 
-  // Update metrics
+  // update metrics
   document.getElementById('res-prob').textContent = r.churnProbability;
   document.getElementById('res-month').textContent = 'Month ' + r.predictedChurnMonth;
   document.getElementById('res-segment').textContent = r.segment;
   document.getElementById('res-narrative').textContent = r.narrative;
 
-  // Update actions
+  // update actions
   document.getElementById('res-actions').innerHTML = r.actions.map(a =>
     `<div class="action-item"><span>${a}</span></div>`
   ).join('');

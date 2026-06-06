@@ -1,17 +1,13 @@
-// ═══════════════════════════════════════════════════════════════
-// common.js  —  ChurnIQ  |  Common utilities for all pages
-// ═══════════════════════════════════════════════════════════════
-
 const STORAGE_KEY  = 'churniq_data';
 const ACTIONED_KEY = 'churniq_actioned';
 
 let csvData = [];
 
-// ── API CONFIGURATION ────────────────────────────────────────────
+// api config
 const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : 'https://michellawjy-churn-anlaysis-aft.hf.space';
 
-// ── DATA PERSISTENCE (localStorage — used as in-memory cache) ────
+// data persistence (localStorage, used as in-memory cache)
 function loadCSVData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -36,12 +32,12 @@ function saveActionedSet(set) {
   catch (e) { }
 }
 
-// ── MONGODB API HELPERS ──────────────────────────────────────────
+// mongoDB api helpers
 
 /**
- * Save all customer records to MongoDB.
+ * save all customer records to mongoDB
  * @param {Array}  customers  - normalised + scored rows
- * @param {string} filename   - original CSV filename
+ * @param {string} filename   - original csv filename
  */
 async function saveToMongo(customers, filename = 'import.csv') {
   const resp = await fetch(`${API_BASE_URL}/data/save`, {
@@ -57,8 +53,8 @@ async function saveToMongo(customers, filename = 'import.csv') {
 }
 
 /**
- * Load all customer records from MongoDB.
- * Falls back to localStorage cache on failure.
+ * load all customer records from mongoDB
+ * falls back to local storage cache on failure
  */
 async function loadFromMongo() {
   const resp = await fetch(`${API_BASE_URL}/data/load`);
@@ -68,7 +64,7 @@ async function loadFromMongo() {
 }
 
 /**
- * Delete ALL data from MongoDB (and clear localStorage cache).
+ * delete all data from mongoDB (and clear localStorage cache).
  */
 async function deleteFromMongo() {
   const resp = await fetch(`${API_BASE_URL}/data/delete`, { method: 'DELETE' });
@@ -80,7 +76,7 @@ async function deleteFromMongo() {
 }
 
 /**
- * Get MongoDB connection status + record count.
+ * get mongoDB connection status + record count
  */
 async function getMongoStatus() {
   try {
@@ -92,7 +88,7 @@ async function getMongoStatus() {
   }
 }
 
-// ── CSV PARSER ───────────────────────────────────────────────────
+// csv parser
 function parseCSVLine(line) {
   const fields = [];
   let cur = '', inQ = false;
@@ -169,7 +165,7 @@ function normalizeRow(raw, idx, churnInCustValueCol = false) {
   };
 }
 
-// ── BATCH PREDICTION API ─────────────────────────────────────────
+// batch predict api
 async function fetchBatchPredictions(rows) {
   const payload = rows.map(r => ({
     call_failure: r.callFailures,
@@ -198,14 +194,14 @@ async function fetchBatchPredictions(rows) {
   return predictions;
 }
 
-// ── UTILITIES ────────────────────────────────────────────────────
+// utils
 function formatCurrency(n) {
   if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return '$' + Math.round(n / 1_000) + 'K';
   return '$' + Math.round(n);
 }
 
-// ── TOAST ────────────────────────────────────────────────────────
+// toast
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.className = 'toast ' + type;
@@ -217,7 +213,7 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ── IMPORT MODAL ─────────────────────────────────────────────────
+// import modal
 function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
 function closeModalIfOutside(e) { if (e.target === e.currentTarget) closeModal(); }
@@ -237,7 +233,7 @@ function handleFileSelect(e) {
   e.target.value = '';
 }
 
-// ── DELETE CONFIRM MODAL ─────────────────────────────────────────
+// delete modal
 function openDeleteModal() {
   document.getElementById('delete-modal-overlay').classList.add('open');
 }
@@ -267,7 +263,7 @@ async function confirmDeleteAllData() {
   }
 }
 
-// ── FILE PROCESSING ──────────────────────────────────────────────
+// file processing
 function processFile(file) {
   closeModal();
   document.getElementById('loading-overlay').classList.remove('hidden');
@@ -296,7 +292,7 @@ function processFile(file) {
         csvData[i].riskLevel = scores[i] >= 65 ? 'high' : scores[i] >= 35 ? 'medium' : 'low';
       }
 
-      // Save to MongoDB
+      // save to mongoDB
       document.getElementById('loading-text').textContent =
         `Saving ${csvData.length.toLocaleString()} customers to database…`;
       let mongoFailed = false;
@@ -309,14 +305,14 @@ function processFile(file) {
         console.warn('[ChurnIQ] Database save failed (using localStorage fallback):', mongoErr.message);
       }
 
-      // Always save to localStorage as cache
+      // always save to local storage as cache
       saveCSVData(csvData);
 
       document.getElementById('loading-overlay').classList.add('hidden');
 
       if (mongoFailed) {
         // Show warning first, then success toast after warning clears (3.5s)
-        showToast('⚠ Database unavailable — data saved locally only', 'error');
+        showToast('⚠ Database unavailable. Data saved locally only', 'error');
         setTimeout(() => showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`), 4000);
       } else {
         showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
@@ -332,7 +328,7 @@ function processFile(file) {
   reader.readAsText(file);
 }
 
-// ── DATA STATUS BAR ──────────────────────────────────────────────
+// data status 
 function updateDataStatus(count) {
   const dot  = document.getElementById('status-dot');
   const text = document.getElementById('status-text');
@@ -345,25 +341,25 @@ function updateDataStatus(count) {
   }
 }
 
-// ── INIT ─────────────────────────────────────────────────────────
+// init
 document.addEventListener('DOMContentLoaded', async () => {
   let loaded = false;
   try {
     const status = await getMongoStatus();
 
     if (!status.connected) {
-      // MongoDB tidak tersedia, pakai localStorage
+      // mongoDB tidak tersedia, pakai local storage
       csvData = loadCSVData();
       loaded = true;
     } else if (status.count === 0) {
-      // MongoDB kosong (mungkin di-delete dari device lain)
-      // Paksa clear localStorage supaya sinkron
+      // mongoDB kosong (mungkin di-delete dari device lain)
+      // paksa clear localStorage supaya sinkron
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(ACTIONED_KEY);
       csvData = [];
       loaded = true;
     } else {
-      // MongoDB ada data, load dari sana
+      // mongoDB ada data, load dari sana
       const loadingOverlay = document.getElementById('loading-overlay');
       const loadingText    = document.getElementById('loading-text');
       if (loadingOverlay && loadingText) {

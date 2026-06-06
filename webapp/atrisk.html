@@ -3,23 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChurnIQ — At-Risk Customers</title>
+<title>At-Risk Customers</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <link rel="stylesheet" href="atrisk.css">
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="loading-overlay hidden" id="loading-overlay">
   <div class="loading-spinner-big"></div>
   <div class="loading-text" id="loading-text">Processing…</div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo-wrap">
     <div class="sidebar-logo">CI</div>
@@ -50,7 +47,6 @@
   </a>
 </nav>
 
-<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <h1>At-Risk Customers</h1>
@@ -72,7 +68,7 @@
 
   <div class="content">
 
-    <!-- EMPTY STATE -->
+    <!-- empty -->
     <div id="atrisk-empty" class="empty-state" style="display:none">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <h3>No data loaded</h3>
@@ -80,7 +76,7 @@
       <button class="btn-primary" onclick="openModal()">Import CSV</button>
     </div>
 
-    <!-- TABLE -->
+    <!-- table -->
     <div id="atrisk-content" style="display:none">
       <div class="table-card">
         <div class="table-controls">
@@ -128,7 +124,7 @@
   </div>
 </div>
 
-<!-- IMPORT MODAL -->
+<!-- import modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
   <div class="modal">
     <div class="modal-header">
@@ -152,7 +148,7 @@
   </div>
 </div>
 
-<!-- ACTION MODAL -->
+<!-- action modal -->
 <div class="action-modal-overlay" id="action-modal-overlay" onclick="closeActionModalIfOutside(event)">
   <div class="action-modal">
     <div class="action-modal-header">
@@ -181,7 +177,7 @@
 <script src="common.js"></script>
 <script src="atrisk.js"></script>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- delete modal -->
 <div class="delete-modal-overlay" id="delete-modal-overlay" onclick="closeDeleteModalIfOutside(event)">
   <div class="delete-modal">
     <div class="delete-modal-header">

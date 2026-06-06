@@ -3,23 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ChurnIQ — Customer Segments</title>
+<title>Customer Segments</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <link rel="stylesheet" href="segments.css">
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="loading-overlay hidden" id="loading-overlay">
   <div class="loading-spinner-big"></div>
   <div class="loading-text" id="loading-text">Processing…</div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="sidebar-logo-wrap">
     <div class="sidebar-logo">CI</div>
@@ -50,7 +47,6 @@
   </a>
 </nav>
 
-<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <h1>Customer Segments</h1>
@@ -72,7 +68,7 @@
 
   <div class="content">
 
-    <!-- EMPTY STATE -->
+    <!-- if no cust segments -->
     <div id="segments-empty" class="empty-state" style="display:none">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
       <h3>No data loaded</h3>
@@ -80,13 +76,13 @@
       <button class="btn-primary" onclick="openModal()">Import CSV</button>
     </div>
 
-    <!-- SEGMENTS GRID -->
+    <!-- grid segments -->
     <div class="segments-grid" id="segments-grid" style="display:none"></div>
 
   </div>
 </div>
 
-<!-- IMPORT MODAL -->
+<!-- import modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalIfOutside(event)">
   <div class="modal">
     <div class="modal-header">
@@ -113,7 +109,7 @@
 <script src="common.js"></script>
 <script src="segments.js"></script>
 
-<!-- DELETE CONFIRM MODAL -->
+<!-- delete modal -->
 <div class="delete-modal-overlay" id="delete-modal-overlay" onclick="closeDeleteModalIfOutside(event)">
   <div class="delete-modal">
     <div class="delete-modal-header">
