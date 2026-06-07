@@ -71,7 +71,7 @@ async function runPrediction() {
 }
 
 function getSegment(d, prob) {
-  if (prob > 0.9) return 'Inactive / Zombie';
+  if (prob > 0.9) return 'Inactive';
   if (d.complains) return 'High-Risk Churner';
   if (prob < 0.2) return 'Loyal Base';
   return 'Standard User';
