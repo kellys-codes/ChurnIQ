@@ -19,7 +19,7 @@ CORS(app)
 # ── Model Loading ─────────────────────────────────────────────
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "model.json"),  # fixed: was "../model.json", wrong for HuggingFace
+    os.path.join(os.path.dirname(__file__), "model.json"),
 )
 
 booster = None
@@ -40,7 +40,6 @@ FEATURE_NAMES = [
 # ── MongoDB Setup ─────────────────────────────────────────────
 # Set MONGODB_URI as a HuggingFace Space secret, e.g.:
 #   MONGODB_URI = "mongodb+srv://<user>:<pass>@cluster.mongodb.net"
-# Locally, set it in your .env file or export it in your shell.
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB  = os.environ.get("MONGODB_DB", "churniq")
 
