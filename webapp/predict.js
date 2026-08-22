@@ -28,20 +28,33 @@ async function computeChurnPrediction(d) {
   const { prediction: score } = await resp.json();
   const finalProb = score / 100;
 
+  const isHigh = finalProb >= 0.5;
+  const riskLevel = isHigh ? 'HIGH' : finalProb >= 0.25 ? 'MEDIUM' : 'LOW';
   return {
     score,
-    riskLevel: finalProb >= 0.6 ? 'HIGH' : finalProb >= 0.25 ? 'MEDIUM' : 'LOW',
+    riskLevel,
     churnProbability: score + '%',
-    predictedChurnMonth: finalProb > 0.8 ? '1–3' : '12+',
+    predictedChurnMonth: isHigh ? '1–3' : '12+',
     segment: getSegment(d, finalProb),
-    narrative: getNarrative(d, finalProb, finalProb > 0.8 ? 3 : 24),
-    actions: getActions(d, finalProb)
+    narrative: getNarrative(d, riskLevel, isHigh ? 3 : 24),
+    actions: getActions(d, riskLevel)
   };
 }
 
 // ui control
 async function runPrediction() {
   const id = 'PREDICTED CUST';
+
+  const predictionFieldIds = [
+    'f-failures', 'f-complains', 'f-charge', 'f-minutes',
+    'f-freq', 'f-sms', 'f-distinct', 'f-age', 'f-tariff'
+  ];
+  const hasAnyInput = predictionFieldIds.some(fid => document.getElementById(fid).value !== '');
+  if (!hasAnyInput) {
+    showToast('Please fill in at least one field before calculating churn risk.', 'error');
+    return;
+  }
+
   const data = {
     failures: parseFloat(document.getElementById('f-failures').value) || 0,
     complains: parseInt(document.getElementById('f-complains').value) || 0,

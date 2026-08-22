@@ -1,6 +1,7 @@
 
 import os
 import math
+from scipy.special import erf
 import json
 import numpy as np
 import xgboost as xgb
@@ -19,7 +20,7 @@ CORS(app)
 # ── Model Loading ─────────────────────────────────────────────
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "model.json"),
+    os.path.join(os.path.dirname(__file__), "..", "model.json"),
 )
 
 booster = None
@@ -93,26 +94,6 @@ def load_model():
 
 
 # ── Inference Helpers ─────────────────────────────────────────
-def _erf(x: float) -> float:
-    p = 0.3275911
-    a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
-    sign = -1 if x < 0 else 1
-    x = abs(x)
-    t = 1.0 / (1.0 + p * x)
-    y = 1.0 - (((((a[4] * t + a[3]) * t + a[2]) * t + a[1]) * t + a[0]) * t * math.exp(-x * x))
-    return sign * y
-
-
-def _vectorized_erf(x: np.ndarray) -> np.ndarray:
-    p = 0.3275911
-    a = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429]
-    sign = np.sign(x)
-    sign = np.where(sign == 0, 1, sign)
-    x_abs = np.abs(x)
-    t = 1.0 / (1.0 + p * x_abs)
-    y = 1.0 - (((((a[4] * t + a[3]) * t + a[2]) * t + a[1]) * t + a[0]) * t * np.exp(-x_abs * x_abs))
-    return sign * y
-
 
 def compute_risk_score(features: dict) -> int:
     call_failure   = float(features.get("call_failure", 0))
@@ -133,16 +114,14 @@ def compute_risk_score(features: dict) -> int:
     dmat = xgb.DMatrix(row)
     predicted_time = max(float(booster.predict(dmat)[0]), 1e-9)
 
-    sigma = 1.0
-    z = (math.log(36) - math.log(predicted_time)) / sigma
-    risk = 0.5 * (1.0 + _erf(z / math.sqrt(2)))
+    resolved = os.path.abspath(MODEL_PATH)
+    with open(resolved, "r") as f:
+        meta = json.load(f)
+    sigma_str = meta.get("learner", {}).get("objective", {}).get("aft_loss_param", {}).get("aft_loss_distribution_scale", "1.0")
+    sigma = float(sigma_str)
 
-    if call_failure > 0:
-        risk += call_failure * 0.03
-    if complains > 0:
-        risk += 0.35
-    if minutes_of_use < 30 and freq_use < 5:
-        risk = max(risk, 0.85)
+    z = (math.log(36) - math.log(predicted_time)) / sigma
+    risk = 0.5 * (1.0 + erf(z / math.sqrt(2)))
 
     final = min(max(risk, 0.01), 0.99)
     return min(max(round(final * 100), 0), 100)
@@ -206,7 +185,7 @@ def predict_survival():
         resolved = os.path.abspath(MODEL_PATH)
         with open(resolved, "r") as f:
             meta = json.load(f)
-        sigma_str = meta.get("learner", {}).get("learner_model_param", {}).get("aft_loss_distribution_scale", "1.0")
+        sigma_str = meta.get("learner", {}).get("objective", {}).get("aft_loss_param", {}).get("aft_loss_distribution_scale", "1.0")
         sigma = float(sigma_str)
 
         curve = []
@@ -215,7 +194,7 @@ def predict_survival():
                 curve.append(100.0)
                 continue
             z = (math.log(month) - log_predicted) / sigma
-            churn_prob = 0.5 * (1.0 + _vectorized_erf(z / math.sqrt(2)))
+            churn_prob = 0.5 * (1.0 + erf(z / math.sqrt(2)))
             surv = 1.0 - churn_prob
             surv = np.where(z < -5, 1.0, surv)
             surv = np.where(z > 5, 0.0, surv)

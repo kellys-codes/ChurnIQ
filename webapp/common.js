@@ -289,7 +289,7 @@ function processFile(file) {
 
       for (let i = 0; i < csvData.length; i++) {
         csvData[i].riskScore = scores[i];
-        csvData[i].riskLevel = scores[i] >= 65 ? 'high' : scores[i] >= 35 ? 'medium' : 'low';
+        csvData[i].riskLevel = scores[i] >= 50 ? 'high' : scores[i] >= 25 ? 'medium' : 'low';
       }
 
       // save to mongoDB

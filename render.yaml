@@ -6,4 +6,4 @@ services:
     startCommand: gunicorn --chdir webapp server:app
     envVars:
       - key: CHURNIQ_MODEL_PATH
-        value: ./model.json
+        value: ../model.json
