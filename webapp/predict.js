@@ -28,7 +28,8 @@ async function computeChurnPrediction(d) {
   const { prediction: score } = await resp.json();
   const finalProb = score / 100;
 
-  const isHigh = finalProb >= 0.5;
+  const isHigh = finalProb >= 0.5; // catches more real churners, without over-flagging like a lower cutoff would
+
   const riskLevel = isHigh ? 'HIGH' : finalProb >= 0.25 ? 'MEDIUM' : 'LOW';
   return {
     score,

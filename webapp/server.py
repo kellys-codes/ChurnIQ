@@ -17,7 +17,7 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# ── Model Loading ─────────────────────────────────────────────
+# ~~ Model Loading ~~
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
     os.path.join(os.path.dirname(__file__), "..", "model.json"),
@@ -38,7 +38,7 @@ FEATURE_NAMES = [
     "Minutes of Use",
 ]
 
-# ── MongoDB Setup ─────────────────────────────────────────────
+# ~~ MongoDB Setup ~~
 # Set MONGODB_URI as a HuggingFace Space secret, e.g.:
 #   MONGODB_URI = "mongodb+srv://<user>:<pass>@cluster.mongodb.net"
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
@@ -93,7 +93,7 @@ def load_model():
     print(f"[ChurnIQ] Model loaded — {booster.num_boosted_rounds()} trees, base_score={base_score}")
 
 
-# ── Inference Helpers ─────────────────────────────────────────
+# ~~ Inference Helpers ~~
 
 def compute_risk_score(features: dict) -> int:
     call_failure   = float(features.get("call_failure", 0))
@@ -127,7 +127,7 @@ def compute_risk_score(features: dict) -> int:
     return min(max(round(final * 100), 0), 100)
 
 
-# ── Prediction Routes ─────────────────────────────────────────
+# ~~ Prediction Routes ~~
 @app.route("/predict", methods=["POST"])
 def predict_single():
     body = request.get_json(force=True)
@@ -206,7 +206,7 @@ def predict_survival():
         return jsonify({"error": str(e)}), 500
 
 
-# ── MongoDB Data Routes ───────────────────────────────────────
+# ~~ MongoDB Data Routes ~~
 
 @app.route("/data/save", methods=["POST"])
 def data_save():
@@ -299,7 +299,7 @@ def health():
     return jsonify({"status": "ok", "model_loaded": booster is not None, "mongo": mongo_ok})
 
 
-# ── Startup ───────────────────────────────────────────────────
+# ~~ Startup ~~
 # Called at module level so Gunicorn / HuggingFace WSGI initialises correctly.
 # (Inside __main__ only would be skipped by Gunicorn.)
 load_model()
