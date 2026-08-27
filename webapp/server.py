@@ -5,7 +5,7 @@ from scipy.special import erf
 import json
 import numpy as np
 import xgboost as xgb
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
@@ -130,6 +130,24 @@ def compute_risk_score(features: dict) -> int:
 
     final = min(max(risk, 0.01), 0.99)
     return min(max(round(final * 100), 0), 100)
+
+
+# ~~ Frontend Routes ~~
+@app.route("/")
+def serve_index():
+    if os.path.exists(os.path.join(BASE_DIR, "index.html")):
+        return send_from_directory(BASE_DIR, "index.html")
+    return send_from_directory(os.path.join(BASE_DIR, "static"), "index.html")
+
+@app.route("/<path:path>")
+def serve_static_files(path):
+    if os.path.exists(os.path.join(BASE_DIR, path)):
+        return send_from_directory(BASE_DIR, path)
+    static_dir = os.path.join(BASE_DIR, "static")
+
+    if os.path.exists(os.path.join(static_dir, path)):
+        return send_from_directory(static_dir, path)
+    return jsonify({"error": f"File '{path}' not found"}), 404
 
 
 # ~~ Prediction Routes ~~
