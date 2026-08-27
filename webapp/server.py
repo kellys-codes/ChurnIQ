@@ -18,9 +18,14 @@ app = Flask(__name__)
 CORS(app)
 
 # ~~ Model Loading ~~
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+local_model = os.path.join(BASE_DIR, "model.json")
+parent_model = os.path.join(BASE_DIR, "..", "model.json")
+
 MODEL_PATH = os.environ.get(
     "CHURNIQ_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "model.json"),
+    local_model if os.path.exists(local_model) else parent_model,
 )
 
 booster = None
