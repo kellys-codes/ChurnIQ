@@ -6,3 +6,4 @@ gunicorn
 pymongo[srv]
 scipy
 python-dotenv
+spaces
