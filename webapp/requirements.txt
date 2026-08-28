@@ -5,3 +5,4 @@ xgboost
 pymongo[srv]
 scipy
 python-dotenv
+gunicorn
