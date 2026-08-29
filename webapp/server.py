@@ -30,6 +30,7 @@ MODEL_PATH = os.environ.get(
 
 booster = None
 base_score = 0.5
+sigma = 1.0
 
 FEATURE_NAMES = [
     "Call Failure",
@@ -81,8 +82,8 @@ def get_sessions_collection():
 
 
 def load_model():
-    """Load the XGBoost booster once at startup."""
-    global booster, base_score
+    # Load the XGBoost booster once at startup
+    global booster, base_score, sigma
     resolved = os.path.abspath(MODEL_PATH)
     print(f"[ChurnIQ] Loading model from {resolved}")
     booster = xgb.Booster()
@@ -95,7 +96,9 @@ def load_model():
         meta = json.load(f)
     raw_bs = meta.get("learner", {}).get("learner_model_param", {}).get("base_score", "0.5")
     base_score = float(str(raw_bs).strip("[]"))
-    print(f"[ChurnIQ] Model loaded — {booster.num_boosted_rounds()} trees, base_score={base_score}")
+    sigma_str = meta.get("learner", {}).get("objective", {}).get("aft_loss_param", {}).get("aft_loss_distribution_scale", "1.0")
+    sigma = float(sigma_str)
+    print(f"[ChurnIQ] Model loaded — {booster.num_boosted_rounds()} trees, base_score={base_score}, sigma={sigma}")
 
 
 # ~~ Inference Helpers ~~
@@ -118,12 +121,6 @@ def compute_risk_score(features: dict) -> int:
     )
     dmat = xgb.DMatrix(row)
     predicted_time = max(float(booster.predict(dmat)[0]), 1e-9)
-
-    resolved = os.path.abspath(MODEL_PATH)
-    with open(resolved, "r") as f:
-        meta = json.load(f)
-    sigma_str = meta.get("learner", {}).get("objective", {}).get("aft_loss_param", {}).get("aft_loss_distribution_scale", "1.0")
-    sigma = float(sigma_str)
 
     z = (math.log(36) - math.log(predicted_time)) / sigma
     risk = 0.5 * (1.0 + erf(z / math.sqrt(2)))
@@ -204,12 +201,6 @@ def predict_survival():
         dmat = xgb.DMatrix(row_arr)
         predicted_times = np.maximum(booster.predict(dmat), 1e-9)
         log_predicted = np.log(predicted_times)
-
-        resolved = os.path.abspath(MODEL_PATH)
-        with open(resolved, "r") as f:
-            meta = json.load(f)
-        sigma_str = meta.get("learner", {}).get("objective", {}).get("aft_loss_param", {}).get("aft_loss_distribution_scale", "1.0")
-        sigma = float(sigma_str)
 
         curve = []
         for month in range(49):
