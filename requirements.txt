@@ -1,9 +1,8 @@
 Flask
 flask-cors
 numpy
-xgboost
+xgboost-cpu
 gunicorn
 pymongo[srv]
 scipy
 python-dotenv
-spaces

@@ -1,7 +1,7 @@
 flask
 flask-cors
 numpy
-xgboost
+xgboost-cpu
 pymongo[srv]
 scipy
 python-dotenv

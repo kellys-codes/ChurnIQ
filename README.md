@@ -1,13 +1,3 @@
----
-title: ChurnIQ API
-emoji: 📉
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-app_file: app.py
-pinned: false
----
-
 # ChurnIQ
 
 ChurnIQ is a web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave.
