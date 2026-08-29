@@ -129,6 +129,34 @@ def compute_risk_score(features: dict) -> int:
     return min(max(round(final * 100), 0), 100)
 
 
+def compute_risk_scores_batch(rows: list) -> list:
+    features_list = [
+        [
+            float(r.get("call_failure", 0)),
+            float(r.get("complains", 0)),
+            float(r.get("charge_amount", 0)),
+            float(r.get("frequency_of_use", 0)),
+            float(r.get("frequency_of_sms", 0)),
+            float(r.get("distinct_called_numbers", 0)),
+            float(r.get("age_group", 1)),
+            float(r.get("tariff_plan", 1)),
+            float(r.get("minutes_of_use", 0)),
+        ]
+        for r in rows
+    ]
+
+    row_arr = np.array(features_list, dtype=np.float32)
+    dmat = xgb.DMatrix(row_arr)
+    predicted_times = np.maximum(booster.predict(dmat), 1e-9)
+
+    z = (math.log(36) - np.log(predicted_times)) / sigma
+    risk = 0.5 * (1.0 + erf(z / math.sqrt(2)))
+
+    final = np.clip(risk, 0.01, 0.99)
+    scores = np.clip(np.round(final * 100), 0, 100).astype(int)
+    return scores.tolist()
+
+
 # ~~ Frontend Routes ~~
 @app.route("/")
 def serve_index():
@@ -168,7 +196,7 @@ def predict_batch():
     if not rows or not isinstance(rows, list):
         return jsonify({"error": "Missing 'rows' array in request body"}), 400
     try:
-        predictions = [compute_risk_score(r) for r in rows]
+        predictions = compute_risk_scores_batch(rows)
         return jsonify({"predictions": predictions})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
