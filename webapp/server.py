@@ -7,10 +7,6 @@ import numpy as np
 import xgboost as xgb
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
-from bson import ObjectId
-from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -43,43 +39,6 @@ FEATURE_NAMES = [
     "Tariff Plan",
     "Minutes of Use",
 ]
-
-# ~~ MongoDB Setup ~~
-# Set MONGODB_URI as a HuggingFace Space secret, e.g.:
-#   MONGODB_URI = "mongodb+srv://<user>:<pass>@cluster.mongodb.net"
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
-MONGODB_DB  = os.environ.get("MONGODB_DB", "churniq")
-
-mongo_client = None
-db = None
-
-
-def connect_mongo():
-    """Connect to MongoDB once at startup."""
-    global mongo_client, db
-    try:
-        mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-        mongo_client.admin.command("ping")
-        db = mongo_client[MONGODB_DB]
-        print(f"[ChurnIQ] MongoDB connected → {MONGODB_URI} / db={MONGODB_DB}")
-    except ConnectionFailure as e:
-        print(f"[ChurnIQ] WARNING: MongoDB connection failed: {e}")
-        print("[ChurnIQ] Running without MongoDB — data will not persist.")
-        mongo_client = None
-        db = None
-
-
-def get_collection():
-    if db is None:
-        return None
-    return db["customers"]
-
-
-def get_sessions_collection():
-    if db is None:
-        return None
-    return db["sessions"]
-
 
 def load_model():
     # Load the XGBoost booster once at startup
@@ -248,104 +207,15 @@ def predict_survival():
         return jsonify({"error": str(e)}), 500
 
 
-# ~~ MongoDB Data Routes ~~
-
-@app.route("/data/save", methods=["POST"])
-def data_save():
-    """
-    Save a batch of customer records to MongoDB.
-    Body: { "customers": [ {...}, ... ], "filename": "my.csv" }
-    Appends to existing data (does not replace).
-    """
-    col = get_collection()
-    if col is None:
-        return jsonify({"error": "MongoDB not connected"}), 503
-
-    body      = request.get_json(force=True)
-    customers = body.get("customers", [])
-    filename  = body.get("filename", "unknown.csv")
-
-    if not customers:
-        return jsonify({"error": "No customers provided"}), 400
-
-    try:
-        sessions = get_sessions_collection()
-        session_doc = {
-            "filename": filename,
-            "imported_at": datetime.utcnow().isoformat(),
-            "count": len(customers)
-        }
-        session_result = sessions.insert_one(session_doc)
-        session_id = str(session_result.inserted_id)
-
-        for c in customers:
-            c["session_id"]   = session_id
-            c["imported_at"]  = session_doc["imported_at"]
-            c.pop("_id", None)  # avoid ObjectId conflicts on re-import
-
-        result   = col.insert_many(customers)
-        inserted = len(result.inserted_ids)
-
-        return jsonify({"ok": True, "inserted": inserted, "session_id": session_id})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/data/load", methods=["GET"])
-def data_load():
-    """Load all customer records from MongoDB."""
-    col = get_collection()
-    if col is None:
-        return jsonify({"error": "MongoDB not connected"}), 503
-    try:
-        docs = list(col.find({}, {"_id": 0}))
-        return jsonify({"customers": docs, "count": len(docs)})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/data/delete", methods=["DELETE"])
-def data_delete():
-    """Delete ALL customer records and sessions from MongoDB."""
-    col      = get_collection()
-    sessions = get_sessions_collection()
-    if col is None:
-        return jsonify({"error": "MongoDB not connected"}), 503
-    try:
-        result = col.delete_many({})
-        if sessions is not None:
-            sessions.delete_many({})
-        return jsonify({"ok": True, "deleted": result.deleted_count})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/data/status", methods=["GET"])
-def data_status():
-    """Quick health check — returns record count in MongoDB."""
-    col      = get_collection()
-    sessions = get_sessions_collection()
-    if col is None:
-        return jsonify({"connected": False, "count": 0, "sessions": 0})
-    try:
-        count    = col.count_documents({})
-        sess_cnt = sessions.count_documents({}) if sessions is not None else 0
-        return jsonify({"connected": True, "count": count, "sessions": sess_cnt})
-    except Exception as e:
-        return jsonify({"connected": False, "error": str(e), "count": 0, "sessions": 0})
-
-
 @app.route("/health", methods=["GET"])
 def health():
-    mongo_ok = mongo_client is not None
-    return jsonify({"status": "ok", "model_loaded": booster is not None, "mongo": mongo_ok})
+    return jsonify({"status": "ok", "model_loaded": booster is not None})
 
 
 # ~~ Startup ~~
 # Called at module level so Gunicorn / HuggingFace WSGI initialises correctly.
 # (Inside __main__ only would be skipped by Gunicorn.)
 load_model()
-connect_mongo()
 
 if __name__ == "__main__":
     port = int(os.environ.get("CHURNIQ_PORT", 5000))

@@ -3,6 +3,5 @@ flask-cors
 numpy
 xgboost-cpu
 gunicorn
-pymongo[srv]
 scipy
 python-dotenv
