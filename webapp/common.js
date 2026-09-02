@@ -5,7 +5,7 @@ let csvData = [];
 
 // api config
 const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : 'https://kellykelll.pythonanywhere.com';
+const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : 'https://churniq-01bd8.containers.snapdeploy.app';
 
 // data persistence (localStorage, used as in-memory cache)
 function loadCSVData() {
