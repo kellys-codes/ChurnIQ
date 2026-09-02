@@ -5,7 +5,6 @@ let csvData = [];
 
 // api config
 const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-// same-origin in production — frontend and backend are served by the same SnapDeploy container
 const API_BASE_URL = isLocalhost ? 'http://localhost:5000' : '';
 
 // data persistence (localStorage, used as in-memory cache)
