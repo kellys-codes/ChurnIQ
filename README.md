@@ -2,6 +2,9 @@
 
 A web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave. Uses a machine learning model trained on real customer usage data (call failures, complaints, usage patterns, billing, etc.) to estimate how likely each customer is to churn, and shows that information through a simple dashboard.
 
+## 💁 My Role
+ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, model design, and evaluation. Also contributed to small parts of the web app.
+
 ## 📚 Tech stack
 
 - **Backend:** Python, Flask, XGBoost, MongoDB (for storing uploaded customer data)
