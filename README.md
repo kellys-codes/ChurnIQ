@@ -98,3 +98,7 @@ Churn-Analysis/
 ├── baseline.ipynb         # First model attempt
 └── improvement_plan.ipynb # Final model training and evaluation
 ```
+## 🔗 Links to Demo
+
+- **Video**: https://drive.google.com/file/d/1aYjKM1K-v0pltn5_nAKEWBIkajtgjmWD/view?usp=sharing
+- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app
