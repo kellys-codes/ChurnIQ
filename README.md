@@ -7,7 +7,7 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 
 ## 📚 Tech stack
 
-- **Backend:** Python, Flask, XGBoost, MongoDB (for storing uploaded customer data)
+- **Backend:** Python, Flask, XGBoost
 - **Frontend:** Plain HTML, CSS, and JavaScript (no framework), with Chart.js for the dashboard charts
 - **Model training:** Jupyter notebooks, pandas, scikit-learn / scikit-survival
 
@@ -19,28 +19,17 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 - **Predict Customer:** Manually enter one customer's details to get an instant risk prediction 
 
 
-## What it does
+## Architecture
 
-- **Predicts churn risk** for a single customer by filling out a form, or for a whole list of customers at once by uploading a CSV file.
-- **Scores every customer** as LOW, MEDIUM, or HIGH risk, along with a churn probability percentage.
-- **Estimates when** a high-risk customer is likely to churn (e.g. within the next few months).
-- **Suggests next steps**, like "escalate this complaint" or "schedule a retention call."
-- **Groups customers into segments** automatically, such as:
-  - High-risk customers
-  - Low-engagement customers
-  - Pay-as-you-go customers who could be upsold to a contract
-  - Loyal, long-term customers
-  - New subscribers
-  - "Silent churners" — customers who left without ever filing a complaint
-- **Visualizes everything** on a dashboard with charts (churn rate over time, revenue at risk, customer breakdowns, etc.).
+Here's the journey a customer's data takes through ChurnIQ, from upload to insight:
 
-## How it works
+1. **In the browser** — you either fill out one customer on the Predict page, or drop in a CSV. Either way, the plain JS frontend normalizes the data into a consistent shape before it goes anywhere.
+2. **Over to Flask** — that data hits the API, which loads the trained XGBoost survival model once at startup and keeps it in memory for fast inference.
+3. **The model does its thing** — instead of a flat yes/no, it predicts *how many months* a customer is likely to stay subscribed. The API converts that into a churn probability for a given time window (e.g. "chance of leaving within 36 months"), which becomes the 0–100% risk score.
+4. **Back to the browser** — the score comes back with a risk label (LOW/MEDIUM/HIGH). From there, the frontend layers on the extra logic: predicted churn window, suggested next action, and automatic segmenting (high-risk, silent churners, upsell candidates, loyal customers, etc.) — all rule-based, sitting on top of the model's output rather than inside it.
+5. **Sticking around** — results are cached in the browser (localStorage) so the Dashboard, At-Risk, and Segments pages all stay in sync without re-uploading anything.
 
-1. You either fill in one customer's details on the **Predict Customer** page, or upload a CSV of many customers.
-2. The customer data is sent to a backend API, which runs it through a trained machine learning model.
-3. The model returns a churn risk score (0–100%) for each customer.
-4. That score is turned into a risk label (LOW / MEDIUM / HIGH), a predicted churn window, and a suggested action.
-5. If you uploaded a CSV, the results are saved to a database so they show up on the Dashboard, At-Risk, and Segments pages.
+Training happens completely offline and separately from all of this — the notebooks produce `model.json`, and the API just loads whatever's sitting in that file.
 
 ## The model
 
@@ -64,11 +53,11 @@ You need two things running at the same time: the backend (the API that runs the
 
 ```bash
 cd webapp
-pip install flask flask-cors pymongo xgboost numpy python-dotenv scipy
+pip install flask flask-cors xgboost numpy python-dotenv scipy
 python3 server.py
 ```
 
-This starts the API on `http://localhost:5000`. MongoDB is optional — without it, single-customer predictions still work, you just can't save CSV-uploaded data between sessions.
+This starts the API on `http://localhost:5000`.
 
 **2. Frontend**
 
