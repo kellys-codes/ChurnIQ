@@ -18,7 +18,6 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 - **Customer Segments:** Customers automatically grouped into the categories above 
 - **Predict Customer:** Manually enter one customer's details to get an instant risk prediction 
 
-
 ## What it does
 
 - **Predicts churn risk** for a single customer by filling out a form, or for a whole list of customers at once by uploading a CSV file.
@@ -31,7 +30,7 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
   - Pay-as-you-go customers who could be upsold to a contract
   - Loyal, long-term customers
   - New subscribers
-  - "Silent churners" — customers who left without ever filing a complaint
+  - "Silent churners": customers who left without ever filing a complaint
 - **Visualizes everything** on a dashboard with charts (churn rate over time, revenue at risk, customer breakdowns, etc.).
 
 ## How it works
@@ -42,9 +41,9 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 4. That score is turned into a risk label (LOW / MEDIUM / HIGH), a predicted churn window, and a suggested action.
 5. If you uploaded a CSV, the results are saved to a database so they show up on the Dashboard, At-Risk, and Segments pages.
 
-## The model
+## ⚙️ The model
 
-The prediction engine is an **XGBoost survival model** (specifically an AFT — Accelerated Failure Time — model). Instead of just guessing "yes/no" on churn, it estimates *how long* a customer is likely to stay subscribed, and that estimate is converted into a churn probability for a given time window.
+The prediction engine is an **XGBoost survival model** (specifically an AFT (Accelerated Failure Time) model). Instead of just guessing "yes/no" on churn, it estimates *how long* a customer is likely to stay subscribed, and that estimate is converted into a churn probability for a given time window.
 
 It was trained on a telecom customer dataset using features like:
 - Number of dropped/failed calls
