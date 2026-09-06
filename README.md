@@ -94,4 +94,4 @@ Churn-Analysis/
 ## 🔗 Links to Demo
 
 - **Video**: https://drive.google.com/file/d/1aYjKM1K-v0pltn5_nAKEWBIkajtgjmWD/view?usp=sharing
-- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app
+- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app (may take a few minutes to load)
