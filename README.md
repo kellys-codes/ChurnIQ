@@ -1,6 +1,20 @@
-# 📈ChurnIQ
+# 📈 ChurnIQ
 
 A web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave. Uses a machine learning model trained on real customer usage data (call failures, complaints, usage patterns, billing, etc.) to estimate how likely each customer is to churn, and shows that information through a simple dashboard.
+
+## 📚 Tech stack
+
+- **Backend:** Python, Flask, XGBoost, MongoDB (for storing uploaded customer data)
+- **Frontend:** Plain HTML, CSS, and JavaScript (no framework), with Chart.js for the dashboard charts
+- **Model training:** Jupyter notebooks, pandas, scikit-learn / scikit-survival
+
+## 🚀 Features
+
+- **Dashboard:** Overview charts and key stats across all uploaded customers
+- **At-Risk Customers:** A filterable list of customers, sorted by churn risk 
+- **Customer Segments:** Customers automatically grouped into the categories above 
+- **Predict Customer:** Manually enter one customer's details to get an instant risk prediction 
+
 
 ## What it does
 
@@ -16,15 +30,6 @@ A web app that predicts which telecom customers are likely to cancel their subsc
   - New subscribers
   - "Silent churners" — customers who left without ever filing a complaint
 - **Visualizes everything** on a dashboard with charts (churn rate over time, revenue at risk, customer breakdowns, etc.).
-
-## Pages
-
-| Page | What it's for |
-|---|---|
-| Dashboard | Overview charts and key stats across all uploaded customers |
-| At-Risk Customers | A filterable list of customers, sorted by churn risk |
-| Customer Segments | Customers automatically grouped into the categories above |
-| Predict Customer | Manually enter one customer's details to get an instant risk prediction |
 
 ## How it works
 
@@ -47,12 +52,6 @@ It was trained on a telecom customer dataset using features like:
 - Age group and tariff plan
 
 The training and evaluation process (data cleaning, exploratory analysis, and model tuning) is documented in the Jupyter notebooks in the project root (`cleaning.ipynb`, `EDA.ipynb`, `baseline.ipynb`, `improvement_plan.ipynb`).
-
-## Tech stack
-
-- **Backend:** Python, Flask, XGBoost, MongoDB (for storing uploaded customer data)
-- **Frontend:** Plain HTML, CSS, and JavaScript (no framework), with Chart.js for the dashboard charts
-- **Model training:** Jupyter notebooks, pandas, scikit-learn / scikit-survival
 
 ## Running it locally
 
