@@ -22,13 +22,17 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 
 Here's the journey a customer's data takes through ChurnIQ, from upload to insight:
 
-1. **In the browser** — you either fill out one customer on the Predict page, or drop in a CSV. Either way, the plain JS frontend normalizes the data into a consistent shape before it goes anywhere.
-2. **Over to Flask** — that data hits the API, which loads the trained XGBoost survival model once at startup and keeps it in memory for fast inference.
-3. **The model does its thing** — instead of a flat yes/no, it predicts *how many months* a customer is likely to stay subscribed. The API converts that into a churn probability for a given time window (e.g. "chance of leaving within 36 months"), which becomes the 0–100% risk score.
-4. **Back to the browser** — the score comes back with a risk label (LOW/MEDIUM/HIGH). From there, the frontend layers on the extra logic: predicted churn window, suggested next action, and automatic segmenting (high-risk, silent churners, upsell candidates, loyal customers, etc.) — all rule-based, sitting on top of the model's output rather than inside it.
-5. **Sticking around** — results are cached in the browser (localStorage) so the Dashboard, At-Risk, and Segments pages all stay in sync without re-uploading anything.
+1. **In the browser:** you either fill out one customer on the Predict page, or drop in a CSV. Either way, the plain JS frontend normalizes the data into a consistent shape before it goes anywhere.
 
-Training happens completely offline and separately from all of this — the notebooks produce `model.json`, and the API just loads whatever's sitting in that file.
+2. **Over to Flask:** that data hits the API, which loads the trained XGBoost survival model once at startup and keeps it in memory for fast inference.
+
+3. **The model does its thing:** instead of a flat yes/no, it predicts *how many months* a customer is likely to stay subscribed. The API converts that into a churn probability for a given time window (e.g. "chance of leaving within 36 months"), which becomes the 0–100% risk score.
+
+4. **Back to the browser:** the score comes back with a risk label (LOW/MEDIUM/HIGH). From there, the frontend layers on the extra logic: predicted churn window, suggested next action, and automatic segmenting (high-risk, silent churners, upsell candidates, loyal customers, etc.) — all rule-based, sitting on top of the model's output rather than inside it.
+
+5. **Sticking around:** results are cached in the browser (localStorage) so the Dashboard, At-Risk, and Segments pages all stay in sync without re-uploading anything.
+
+Training happens completely offline and separately from all of this. The notebooks produce `model.json`, and the API just loads whatever's sitting in that file.
 
 ## ⚙️ The model
 
