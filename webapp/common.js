@@ -32,62 +32,6 @@ function saveActionedSet(set) {
   catch (e) { }
 }
 
-// mongoDB api helpers
-
-/**
- * save all customer records to mongoDB
- * @param {Array}  customers  - normalised + scored rows
- * @param {string} filename   - original csv filename
- */
-async function saveToMongo(customers, filename = 'import.csv') {
-  const resp = await fetch(`${API_BASE_URL}/data/save`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ customers, filename })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error || `Database save error ${resp.status}`);
-  }
-  return resp.json(); // { ok, inserted, session_id }
-}
-
-/**
- * load all customer records from mongoDB
- * falls back to local storage cache on failure
- */
-async function loadFromMongo() {
-  const resp = await fetch(`${API_BASE_URL}/data/load`);
-  if (!resp.ok) throw new Error(`Database load error ${resp.status}`);
-  const { customers } = await resp.json();
-  return customers || [];
-}
-
-/**
- * delete all data from mongoDB (and clear localStorage cache).
- */
-async function deleteFromMongo() {
-  const resp = await fetch(`${API_BASE_URL}/data/delete`, { method: 'DELETE' });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err.error || `Database delete error ${resp.status}`);
-  }
-  return resp.json(); // { ok, deleted }
-}
-
-/**
- * get mongoDB connection status + record count
- */
-async function getMongoStatus() {
-  try {
-    const resp = await fetch(`${API_BASE_URL}/data/status`);
-    if (!resp.ok) return { connected: false, count: 0 };
-    return resp.json();
-  } catch (e) {
-    return { connected: false, count: 0 };
-  }
-}
-
 // csv parser
 function parseCSVLine(line) {
   const fields = [];
@@ -247,20 +191,16 @@ function closeDeleteModalIfOutside(e) {
 async function confirmDeleteAllData() {
   closeDeleteModal();
   document.getElementById('loading-overlay').classList.remove('hidden');
-  document.getElementById('loading-text').textContent = 'Deleting all data from database…';
-  try {
-    const result = await deleteFromMongo();
-    // Clear local cache too
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(ACTIONED_KEY);
-    csvData = [];
-    document.getElementById('loading-overlay').classList.add('hidden');
-    showToast(`✓ Deleted ${result.deleted || 0} customer records from database`, 'success');
-    window.location.href = 'index.html';
-  } catch (err) {
-    document.getElementById('loading-overlay').classList.add('hidden');
-    showToast('Delete failed: ' + err.message, 'error');
-  }
+  document.getElementById('loading-text').textContent = 'Deleting all data…';
+
+  const deletedCount = csvData.length;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(ACTIONED_KEY);
+  csvData = [];
+
+  document.getElementById('loading-overlay').classList.add('hidden');
+  showToast(`✓ Deleted ${deletedCount.toLocaleString()} customer records`, 'success');
+  window.location.href = 'index.html';
 }
 
 // file processing
@@ -292,31 +232,12 @@ function processFile(file) {
         csvData[i].riskLevel = scores[i] >= 50 ? 'high' : scores[i] >= 25 ? 'medium' : 'low';
       }
 
-      // save to mongoDB
       document.getElementById('loading-text').textContent =
-        `Saving ${csvData.length.toLocaleString()} customers to database…`;
-      let mongoFailed = false;
-      try {
-        const saveResult = await saveToMongo(csvData, file.name);
-        console.log(`[ChurnIQ] Database save: ${saveResult.inserted} records inserted, session=${saveResult.session_id}`);
-      } catch (mongoErr) {
-        // Non-fatal: warn but continue with localStorage fallback
-        mongoFailed = true;
-        console.warn('[ChurnIQ] Database save failed (using localStorage fallback):', mongoErr.message);
-      }
-
-      // always save to local storage as cache
+        `Saving ${csvData.length.toLocaleString()} customers…`;
       saveCSVData(csvData);
 
       document.getElementById('loading-overlay').classList.add('hidden');
-
-      if (mongoFailed) {
-        // Show warning first, then success toast after warning clears (3.5s)
-        showToast('⚠ Database unavailable. Data saved locally only', 'error');
-        setTimeout(() => showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`), 4000);
-      } else {
-        showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
-      }
+      showToast(`✓ Loaded ${csvData.length.toLocaleString()} customers from ${file.name}`);
       updateDataStatus(csvData.length);
       if (typeof onDataLoaded === 'function') onDataLoaded(csvData);
     } catch (err) {
@@ -342,47 +263,8 @@ function updateDataStatus(count) {
 }
 
 // init
-document.addEventListener('DOMContentLoaded', async () => {
-  let loaded = false;
-  try {
-    const status = await getMongoStatus();
-
-    if (!status.connected) {
-      // mongoDB tidak tersedia, pakai local storage
-      csvData = loadCSVData();
-      loaded = true;
-    } else if (status.count === 0) {
-      // mongoDB kosong (mungkin di-delete dari device lain)
-      // paksa clear localStorage supaya sinkron
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(ACTIONED_KEY);
-      csvData = [];
-      loaded = true;
-    } else {
-      // mongoDB ada data, load dari sana
-      const loadingOverlay = document.getElementById('loading-overlay');
-      const loadingText    = document.getElementById('loading-text');
-      if (loadingOverlay && loadingText) {
-        loadingText.textContent = 'Loading data from database…';
-        loadingOverlay.classList.remove('hidden');
-      }
-      try {
-        const mongoData = await loadFromMongo();
-        if (mongoData.length > 0) {
-          csvData = mongoData;
-          saveCSVData(csvData);
-          loaded = true;
-        }
-      } finally {
-        if (loadingOverlay) loadingOverlay.classList.add('hidden');
-      }
-    }
-  } catch (e) {
-    console.warn('[ChurnIQ] Could not reach database on init, falling back to localStorage:', e.message);
-  }
-
-  if (!loaded) csvData = loadCSVData();
-
+document.addEventListener('DOMContentLoaded', () => {
+  csvData = loadCSVData();
   updateDataStatus(csvData.length);
 
   if (csvData.length > 0 && typeof onDataLoaded === 'function') onDataLoaded(csvData);
