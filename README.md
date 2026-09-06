@@ -7,7 +7,7 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 
 ## 📚 Tech stack
 
-- **Backend:** Python, Flask, XGBoost, MongoDB (for storing uploaded customer data)
+- **Backend:** Python, Flask, XGBoost
 - **Frontend:** Plain HTML, CSS, and JavaScript (no framework), with Chart.js for the dashboard charts
 - **Model training:** Jupyter notebooks, pandas, scikit-learn / scikit-survival
 
@@ -67,7 +67,7 @@ pip install flask flask-cors pymongo xgboost numpy python-dotenv scipy
 python3 server.py
 ```
 
-This starts the API on `http://localhost:5000`. MongoDB is optional — without it, single-customer predictions still work, you just can't save CSV-uploaded data between sessions.
+This starts the API on `http://localhost:5000`. 
 
 **2. Frontend**
 
