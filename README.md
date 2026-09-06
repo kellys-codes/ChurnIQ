@@ -18,7 +18,6 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 - **Customer Segments:** Customers automatically grouped into the categories above 
 - **Predict Customer:** Manually enter one customer's details to get an instant risk prediction 
 
-
 ## Architecture
 
 Here's the journey a customer's data takes through ChurnIQ, from upload to insight:
@@ -31,9 +30,9 @@ Here's the journey a customer's data takes through ChurnIQ, from upload to insig
 
 Training happens completely offline and separately from all of this — the notebooks produce `model.json`, and the API just loads whatever's sitting in that file.
 
-## The model
+## ⚙️ The model
 
-The prediction engine is an **XGBoost survival model** (specifically an AFT — Accelerated Failure Time — model). Instead of just guessing "yes/no" on churn, it estimates *how long* a customer is likely to stay subscribed, and that estimate is converted into a churn probability for a given time window.
+The prediction engine is an **XGBoost survival model** (specifically an AFT (Accelerated Failure Time) model). Instead of just guessing "yes/no" on churn, it estimates *how long* a customer is likely to stay subscribed, and that estimate is converted into a churn probability for a given time window.
 
 It was trained on a telecom customer dataset using features like:
 - Number of dropped/failed calls
@@ -88,3 +87,7 @@ Churn-Analysis/
 ├── baseline.ipynb         # First model attempt
 └── improvement_plan.ipynb # Final model training and evaluation
 ```
+## 🔗 Links to Demo
+
+- **Video**: https://drive.google.com/file/d/1aYjKM1K-v0pltn5_nAKEWBIkajtgjmWD/view?usp=sharing
+- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app
