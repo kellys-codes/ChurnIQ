@@ -18,7 +18,7 @@ ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, mode
 - **Customer Segments:** Customers automatically grouped into the categories above 
 - **Predict Customer:** Manually enter one customer's details to get an instant risk prediction 
 
-## Architecture
+## 🧱Architecture
 
 Here's the journey a customer's data takes through ChurnIQ, from upload to insight:
 
@@ -28,7 +28,7 @@ Here's the journey a customer's data takes through ChurnIQ, from upload to insig
 
 3. **The model does its thing:** instead of a flat yes/no, it predicts *how many months* a customer is likely to stay subscribed. The API converts that into a churn probability for a given time window (e.g. "chance of leaving within 36 months"), which becomes the 0–100% risk score.
 
-4. **Back to the browser:** the score comes back with a risk label (LOW/MEDIUM/HIGH). From there, the frontend layers on the extra logic: predicted churn window, suggested next action, and automatic segmenting (high-risk, silent churners, upsell candidates, loyal customers, etc.) — all rule-based, sitting on top of the model's output rather than inside it.
+4. **Back to the browser:** the score comes back with a risk label (LOW/MEDIUM/HIGH). From there, the frontend layers on the extra logic: predicted churn window, suggested next action, and automatic segmenting (high-risk, silent churners, upsell candidates, loyal customers, etc.). All rule-based, sitting on top of the model's output rather than inside it.
 
 5. **Sticking around:** results are cached in the browser (localStorage) so the Dashboard, At-Risk, and Segments pages all stay in sync without re-uploading anything.
 
