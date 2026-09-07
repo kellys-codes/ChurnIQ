@@ -1,6 +1,6 @@
 # 📈 ChurnIQ
 
-A web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave. Uses a machine learning model trained on real customer usage data (call failures, complaints, usage patterns, billing, etc.) to estimate how likely each customer is to churn, and shows that information through a simple dashboard.
+A web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave. Uses a survival analysis model trained on real customer usage data (call failures, complaints, usage patterns, billing, etc.) to estimate when each customer is likely to churn (not just whether), and shows that information through a simple dashboard.
 
 ## 🔗 Links to Demo
 
