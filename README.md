@@ -2,6 +2,11 @@
 
 A web app that predicts which telecom customers are likely to cancel their subscription (churn), so a business can reach out to them before they leave. Uses a machine learning model trained on real customer usage data (call failures, complaints, usage patterns, billing, etc.) to estimate how likely each customer is to churn, and shows that information through a simple dashboard.
 
+## 🔗 Links to Demo
+
+- **Video**: https://drive.google.com/file/d/1aYjKM1K-v0pltn5_nAKEWBIkajtgjmWD/view?usp=sharing
+- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app (may take a few minutes to load)
+
 ## 💁 My Role
 ML Engineer: Survival-analysis modeling (XGBoost AFT), feature engineering, model design, and evaluation. Also contributed to small parts of the web app.
 
@@ -91,7 +96,3 @@ Churn-Analysis/
 ├── baseline.ipynb         # First model attempt
 └── improvement_plan.ipynb # Final model training and evaluation
 ```
-## 🔗 Links to Demo
-
-- **Video**: https://drive.google.com/file/d/1aYjKM1K-v0pltn5_nAKEWBIkajtgjmWD/view?usp=sharing
-- **Live app**: https://churniqsystem-01bd8.containers.snapdeploy.app (may take a few minutes to load)
